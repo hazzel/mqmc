@@ -106,8 +106,7 @@ struct event_flip_all
 			config.M.prepare_measurement();
 			*/
 			
-			if (config.param.tprime > 0. || config.param.tprime < 0.)
-				config.M.prepare_flip();
+			config.M.prepare_flip();
 			
 			for (int bt = 0; bt < config.M.n_cb_bonds(); ++bt)
 			{
@@ -116,8 +115,7 @@ struct event_flip_all
 			}
 
 			config.M.partial_advance(0);
-			if (config.param.tprime > 0. || config.param.tprime < 0.)
-				config.M.prepare_measurement();
+			config.M.prepare_measurement();
 		}
 	}
 };
