@@ -152,17 +152,22 @@ class fast_update
 		{
 			for (auto& a : l.bonds("nearest neighbors"))
 			{
-				H0(a.first, a.second) = {0., -l.parity(a.first) * param.t};
+				//if (param.L % 3 == 0 && get_bond_type(a) == 0)
+				auto& kek_bonds = l.bonds("kekule");
+				if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
+					H0(a.first, a.second) = {0., -l.parity(a.first) * param.t * 1.000001};
+				else
+					H0(a.first, a.second) = {0., -l.parity(a.first) * param.t};
 				if (!decoupled)
 					H0(a.first+l.n_sites(), a.second+l.n_sites())
-						= {0., -l.parity(a.first) * param.t};
+						= {0., l.parity(a.first) * param.t};
 			}
 			for (auto& a : l.bonds("d3_bonds"))
 			{
 				H0(a.first, a.second) = {0., -l.parity(a.first) * param.tprime};
 				if (!decoupled)
 					H0(a.first+l.n_sites(), a.second+l.n_sites())
-						= {0., -l.parity(a.first) * param.tprime};
+						= {0., l.parity(a.first) * param.tprime};
 			}
 			if (!decoupled)
 				for (int i = 0; i < l.n_sites(); ++i)
@@ -184,9 +189,9 @@ class fast_update
 				
 				std::complex<double> tp;
 				std::complex<double> im = {0., 1.};
-				if (param.L % 3 == 0 && get_bond_type(a) == 0)
-				//auto& kek_bonds = l.bonds("kekule");
-				//if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
+				//if (param.L % 3 == 0 && get_bond_type(a) == 0)
+				auto& kek_bonds = l.bonds("kekule");
+				if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
 				{
 					//tp = param.t * 1.000001;
 					//tp = param.t * (0.9999+rng()*0.0002);
@@ -196,8 +201,8 @@ class fast_update
 				{
 					tp = param.t;
 				}
-				broken_H0(a.first, a.second) = im * l.parity(a.first) * tp / 4.;
-				broken_H0(a.second, a.first) = im * l.parity(a.second) * tp / 4.;
+				broken_H0(a.first, a.second) = -im * l.parity(a.first) * tp / 4.;
+				broken_H0(a.second, a.first) = -im * l.parity(a.second) * tp / 4.;
 					
 				if (!decoupled)
 				{
@@ -209,7 +214,7 @@ class fast_update
 			}
 			for (auto& a : l.bonds("d3_bonds"))
 			{
-				broken_H0(a.first, a.second) = {0., l.parity(a.first)
+				broken_H0(a.first, a.second) = {0., -l.parity(a.first)
 					* param.tprime / 4.};
 				if (!decoupled)
 					broken_H0(a.first+l.n_sites(), a.second+l.n_sites()) = 
@@ -219,46 +224,15 @@ class fast_update
 			if (!decoupled)
 				for (int i = 0; i < l.n_sites(); ++i)
 				{
-					double m = -(param.mu+l.parity(i)*param.stag_mu);
+					double m = param.mu+l.parity(i)*param.stag_mu;
 					broken_H0(i, i) = m;
 					broken_H0(i+l.n_sites(), i+l.n_sites()) = m;
 					broken_H0(i, i+l.n_sites()) = {0., m};
 					broken_H0(i+l.n_sites(), i) = {0., -m};
 				}
-			
-			/*
-			for (auto& a : l.bonds("kekule"))
-			{
-				double tp = param.t * 1.00000001;
-				broken_H0(a.first, a.second) = {0., l.parity(a.first)
-					* tp / 4.};
-			}
-			for (auto& a : l.bonds("kekule_2"))
-			{
-				double tp = param.t;
-				broken_H0(a.first, a.second) = {0., l.parity(a.first)
-					* tp / 4.};
-			}
-			for (auto& a : l.bonds("kekule_3"))
-			{
-				double tp = param.t;
-				broken_H0(a.first, a.second) = {0., l.parity(a.first)
-					* tp / 4.};
-			}
-			*/
-			
-			/*
-			for (int i = 0; i < l.n_sites(); ++i)
-				for (int j = i; j < l.n_sites(); ++j)
-				{
-					double r = rng();
-					broken_H0(i, j) = {0., l.parity(i) * r};
-					broken_H0(j, i) = {0., l.parity(j) * r};
-				}
-			*/
 		}
 		
-		void build_decoupled_majorana_vertex(int cnt, double parity, double spin, bool symmetry_broken)
+		void build_decoupled_majorana_vertex(int cnt, double parity, double spin)
 		{
 			double x = parity * param.lambda * spin;
 			double xp = - parity * param.lambda * spin;
@@ -272,7 +246,7 @@ class fast_update
 				+ cp*s, sp*s + cp*c - 1.;
 		}
 		
-		void build_coupled_majorana_vertex(int cnt, double parity, double spin, bool symmetry_broken)
+		void build_coupled_majorana_vertex(int cnt, double parity, double spin)
 		{
 			double x;
 			if (param.tprime > 0. || param.tprime < 0.)
@@ -290,8 +264,8 @@ class fast_update
 			complex_t im = {0, 1.};
 			vertex_matrices[cnt] << cx, im*sx, 0., 0.,
 				-im*sx, cx, 0., 0.,
-				0., 0., cx, im*sx,
-				0., 0., -im*sx, cx;
+				0., 0., cx, -im*sx,
+				0., 0., im*sx, cx;
 			inv_vertex_matrices[cnt] = vertex_matrices[cnt].inverse();
 		}
 		
@@ -317,18 +291,18 @@ class fast_update
 				//auto& kek_bonds = l.bonds("kekule");
 				//if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
 				{
-					tp = param.t * 1.000001;
+					tp = param.t * 1.000000;
 					//tp = param.t * (0.9999+rng()*0.0002);
 				}
 				else
 				{
 					tp = param.t;
 				}
-				broken_H0(a.first, a.second) = {tp, 0.};
-				broken_H0(a.second, a.first) = {tp, 0.};
+				broken_H0(a.first, a.second) = {-tp, 0.};
+				broken_H0(a.second, a.first) = {-tp, 0.};
 			}
 			for (auto& a : l.bonds("d3_bonds"))
-				broken_H0(a.first, a.second) = {param.tprime, 0.};
+				broken_H0(a.first, a.second) = {-param.tprime, 0.};
 			/*
 			for (auto& a : l.bonds("chern"))
 			{
@@ -338,10 +312,10 @@ class fast_update
 			}
 			*/
 			for (int i = 0; i < l.n_sites(); ++i)
-				broken_H0(i, i) = -l.parity(i) * param.stag_mu;
+				broken_H0(i, i) = l.parity(i) * param.stag_mu;
 		}
 		
-		void build_dirac_vertex(int cnt, double parity, double spin, bool symmetry_broken)
+		void build_dirac_vertex(int cnt, double parity, double spin)
 		{
 			complex_t c = {std::cosh(param.lambda * spin), 0.};
 			complex_t s = {std::sinh(param.lambda * spin), 0.};
@@ -357,80 +331,49 @@ class fast_update
 			inv_vertex_matrices.resize(8, dmatrix_t(n_vertex_size, n_vertex_size));
 			delta_matrices.resize(8, dmatrix_t(n_vertex_size, n_vertex_size));
 			int cnt = 0;
-			for (bool symmetry_broken : {false, true})
-				for (double parity : {1., -1.})
-					for (double spin : {1., -1.})
+			for (double parity : {1., -1.})
+				for (double spin : {1., -1.})
+				{
+					if (param.decoupling == "majorana")
 					{
-						if (param.decoupling == "majorana")
-						{
-							if (decoupled)
-								build_decoupled_majorana_vertex(cnt, parity, spin, symmetry_broken);
-							else
-								build_coupled_majorana_vertex(cnt, parity, spin, symmetry_broken);
-						}
+						if (decoupled)
+							build_decoupled_majorana_vertex(cnt, parity, spin);
 						else
-							build_dirac_vertex(cnt, parity, spin, symmetry_broken);
-						++cnt;
+							build_coupled_majorana_vertex(cnt, parity, spin);
 					}
+					else
+						build_dirac_vertex(cnt, parity, spin);
+					++cnt;
+				}
 			if (param.decoupling == "majorana" && !(decoupled))
 			{
-				for (int i = 0; i < 2; ++i)
-				{
-					delta_matrices[4*i+0] = vertex_matrices[4*i+1]
-						* inv_vertex_matrices[4*i+0] - id_2;
-					delta_matrices[4*i+1] = vertex_matrices[4*i+0]
-						* inv_vertex_matrices[4*i+1] - id_2;
-					delta_matrices[4*i+2] = vertex_matrices[4*i+3]
-						* inv_vertex_matrices[4*i+2] - id_2;
-					delta_matrices[4*i+3] = vertex_matrices[4*i+2]
-						* inv_vertex_matrices[4*i+3] - id_2;
-				}
+					delta_matrices[0] = vertex_matrices[1]
+						* inv_vertex_matrices[0] - id_2;
+					delta_matrices[1] = vertex_matrices[0]
+						* inv_vertex_matrices[1] - id_2;
+					delta_matrices[2] = vertex_matrices[3]
+						* inv_vertex_matrices[2] - id_2;
+					delta_matrices[3] = vertex_matrices[2]
+						* inv_vertex_matrices[3] - id_2;
 			}
 		}
 		
 		dmatrix_t& get_vertex_matrix(int i, int j, int s)
 		{
 			// Assume i < j and fix sublattice 0 => p=1
-			//int symmetry_broken = (get_bond_type({i, j}) == 0 ? 1 : 0);
-			int symmetry_broken;
-			if (param.use_projector && param.L % 3 == 0 && get_bond_type({i, j}) == 0)
-			//auto& kek_bonds = l.bonds("kekule");
-			//if (param.use_projector && param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), std::make_pair(i, j)) != kek_bonds.end())
-				symmetry_broken = 1;
-			else
-				symmetry_broken = 0;
-				
-			return vertex_matrices[4*symmetry_broken + i%2*2 + static_cast<int>(s<0)];
+			return vertex_matrices[i%2*2 + static_cast<int>(s<0)];
 		}
 		
 		dmatrix_t& get_inv_vertex_matrix(int i, int j, int s)
 		{
 			// Assume i < j and fix sublattice 0 => p=1
-			//int symmetry_broken = (get_bond_type({i, j}) == 0 ? 1 : 0);
-			int symmetry_broken;
-			if (param.use_projector && param.L % 3 == 0 && get_bond_type({i, j}) == 0)
-			//auto& kek_bonds = l.bonds("kekule");
-			//if (param.use_projector && param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), std::make_pair(i, j)) != kek_bonds.end())
-				symmetry_broken = 1;
-			else
-				symmetry_broken = 0;
-			
-			return inv_vertex_matrices[4*symmetry_broken + i%2*2 + static_cast<int>(s<0)];
+			return inv_vertex_matrices[i%2*2 + static_cast<int>(s<0)];
 		}
 		
 		dmatrix_t& get_delta_matrix(int i, int j, int s)
 		{
 			// Assume i < j and fix sublattice 0 => p=1
-			//int symmetry_broken = (get_bond_type({i, j}) == 0 ? 1 : 0);
-			int symmetry_broken;
-			if (param.use_projector && param.L % 3 == 0 && get_bond_type({i, j}) == 0)
-			//auto& kek_bonds = l.bonds("kekule");
-			//if (param.use_projector && param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), std::make_pair(i, j)) != kek_bonds.end())
-				symmetry_broken = 1;
-			else
-				symmetry_broken = 0;
-			
-			return delta_matrices[4*symmetry_broken + i%2*2 + static_cast<int>(s<0)];
+			return delta_matrices[i%2*2 + static_cast<int>(s<0)];
 		}
 
 		int get_bond_type(const std::pair<int, int>& bond) const

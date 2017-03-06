@@ -121,6 +121,9 @@ void mc::init()
 		config.measure.add_observable("n", n_prebin*100);
 	}
 	config.measure.add_observable("energy", n_prebin);
+	config.measure.add_observable("h_t", n_prebin);
+	config.measure.add_observable("h_v", n_prebin);
+	config.measure.add_observable("h_mu", n_prebin);
 	config.measure.add_observable("M2", n_prebin);
 	config.measure.add_observable("M4", n_prebin);
 	config.measure.add_observable("epsilon", n_prebin);

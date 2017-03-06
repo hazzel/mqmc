@@ -141,6 +141,12 @@ struct event_static_measurement
 			
 			if (observables[i] == "energy")
 				add_wick(wick_static_energy{config, rng});
+			else if (observables[i] == "h_t")
+				add_wick(wick_static_h_t{config, rng});
+			else if (observables[i] == "h_v")
+				add_wick(wick_static_h_v{config, rng});
+			else if (observables[i] == "h_mu")
+				add_wick(wick_static_h_mu{config, rng});
 			else if (observables[i] == "M2")
 				add_wick(wick_static_M2{config, rng});
 			else if (observables[i] == "M4")
