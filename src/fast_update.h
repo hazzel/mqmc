@@ -152,10 +152,10 @@ class fast_update
 		{
 			for (auto& a : l.bonds("nearest neighbors"))
 			{
-				//if (param.L % 3 == 0 && get_bond_type(a) == 0)
-				auto& kek_bonds = l.bonds("kekule");
-				if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
-					H0(a.first, a.second) = {0., -l.parity(a.first) * param.t * 1.000001};
+				if (param.L % 3 == 0 && get_bond_type(a) == 0)
+				//auto& kek_bonds = l.bonds("kekule");
+				//if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
+					H0(a.first, a.second) = {0., -l.parity(a.first) * param.t * 1.000000};
 				else
 					H0(a.first, a.second) = {0., -l.parity(a.first) * param.t};
 				if (!decoupled)
@@ -189,13 +189,13 @@ class fast_update
 				
 				std::complex<double> tp;
 				std::complex<double> im = {0., 1.};
-				//if (param.L % 3 == 0 && get_bond_type(a) == 0)
-				auto& kek_bonds = l.bonds("kekule");
-				if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
+				if (param.L % 3 == 0 && get_bond_type(a) == 0)
+				//auto& kek_bonds = l.bonds("kekule");
+				//if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
 				{
 					//tp = param.t * 1.000001;
 					//tp = param.t * (0.9999+rng()*0.0002);
-					tp = param.t * 1.000001 * std::exp(im * 0.00000);
+					tp = param.t * 1.00000000 * std::exp(im * 0.00000);
 				}
 				else
 				{
@@ -303,14 +303,14 @@ class fast_update
 			}
 			for (auto& a : l.bonds("d3_bonds"))
 				broken_H0(a.first, a.second) = {-param.tprime, 0.};
-			/*
+			
 			for (auto& a : l.bonds("chern"))
 			{
-				double tp = 0.000001;
+				double tp = 0.000000;
 				broken_H0(a.first, a.second) = {0., -tp};
 				broken_H0(a.second, a.first) = {0., tp};
 			}
-			*/
+			
 			for (int i = 0; i < l.n_sites(); ++i)
 				broken_H0(i, i) = l.parity(i) * param.stag_mu;
 		}
