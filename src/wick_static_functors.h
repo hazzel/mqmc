@@ -574,20 +574,20 @@ struct wick_static_kek
 		}
 		else
 		{
-		for (int i = 0; i < kek_bonds.size(); ++i)
-			for (int m = 0; m < kek_bonds.size(); ++m)
-				for (int j = 0; j < kek_bonds[i]->size(); ++j)
-					for (int n = 0; n < kek_bonds[m]->size(); ++n)
-					{
-						auto& a = (*kek_bonds[i])[j];
-						auto& b = (*kek_bonds[m])[n];
-						
-						double delta_im = a.first == b.first ? 1. : 0.;
-						
-						kek += factors[i] * factors[m]
-								* (et_gf(a.second, a.first) * et_gf(b.first, b.second)
-								+ (delta_im - et_gf(b.first, a.first)) * et_gf(b.second, a.second));
-					}
+			for (int i = 0; i < kek_bonds.size(); ++i)
+				for (int m = 0; m < kek_bonds.size(); ++m)
+					for (int j = 0; j < kek_bonds[i]->size(); ++j)
+						for (int n = 0; n < kek_bonds[m]->size(); ++n)
+						{
+							auto& a = (*kek_bonds[i])[j];
+							auto& b = (*kek_bonds[m])[n];
+							
+							double delta_im = a.first == b.first ? 1. : 0.;
+							
+							kek += factors[i] * factors[m]
+									* (et_gf(a.second, a.first) * et_gf(b.first, b.second)
+									+ (delta_im - et_gf(b.first, a.first)) * et_gf(b.second, a.second));
+						}
 		}
 		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
 	}

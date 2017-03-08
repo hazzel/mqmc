@@ -277,6 +277,12 @@ class fast_update
 				H0(a.first, a.second) = {-param.tprime, 0.};
 			for (int i = 0; i < l.n_sites(); ++i)
 				H0(i, i) = l.parity(i) * param.stag_mu + param.mu;
+			for (auto& a : l.bonds("chern"))
+			{
+				double tp = 0.000001;
+				H0(a.first, a.second) = {0., -tp};
+				H0(a.second, a.first) = {0., tp};
+			}
 		}
 		
 		void build_broken_dirac_H0(dmatrix_t& broken_H0)
@@ -306,7 +312,7 @@ class fast_update
 			
 			for (auto& a : l.bonds("chern"))
 			{
-				double tp = 0.000000;
+				double tp = 0.000001;
 				broken_H0(a.first, a.second) = {0., -tp};
 				broken_H0(a.second, a.first) = {0., tp};
 			}

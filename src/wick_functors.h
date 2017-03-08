@@ -84,21 +84,21 @@ struct wick_kekule
 		}
 		else
 		{
-		for (int i = 0; i < kek_bonds.size(); ++i)
-			for (int m = 0; m < kek_bonds.size(); ++m)
-				for (int j = 0; j < kek_bonds[i]->size(); ++j)
-					for (int n = 0; n < kek_bonds[m]->size(); ++n)
-					{
-						auto& a = (*kek_bonds[i])[j];
-						auto& b = (*kek_bonds[m])[n];
-						
-						double delta_im = a.first == b.first ? 1. : 0.;
-						double delta_jn = a.second == b.second ? 1. : 0.;
-						
-						kek += factors[i] * factors[m]
+			for (int i = 0; i < kek_bonds.size(); ++i)
+				for (int m = 0; m < kek_bonds.size(); ++m)
+					for (int j = 0; j < kek_bonds[i]->size(); ++j)
+						for (int n = 0; n < kek_bonds[m]->size(); ++n)
+						{
+							auto& a = (*kek_bonds[i])[j];
+							auto& b = (*kek_bonds[m])[n];
+							
+							double delta_im = a.first == b.first ? 1. : 0.;
+							double delta_jn = a.second == b.second ? 1. : 0.;
+
+							kek += factors[i] * factors[m]
 								* (et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
 								+ td_gf(b.first, a.first) * td_gf(b.second, a.second));
-					}
+						}
 		}
 		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
 	}
@@ -310,54 +310,53 @@ struct wick_tp
 {
 	configuration& config;
 	Random& rng;
-	boost::multi_array<std::complex<double>, 3> expKdot;
 
 	wick_tp(configuration& config_, Random& rng_)
 		: config(config_), rng(rng_)
-	{
-		int N = config.l.n_sites();
-		expKdot.resize(boost::extents[N][N][N]);
-		auto& K = config.l.symmetry_point("K");
-		std::complex<double> im = {0., 1.};
-		int i = 0;
-			for (int j = 0; j < config.l.n_sites(); ++j)
-				for (int m = 0; m < config.l.n_sites(); ++m)
-					for (int n = 0; n < config.l.n_sites(); ++n)
-					{
-						int sl_i = config.l.sublattice(i);
-						int sl_j = config.l.sublattice(j);
-						int sl_m = config.l.sublattice(m);
-						int sl_n = config.l.sublattice(n);
-						std::complex<double> p1 = 1., p2 = 1., p3 = 1., p4 = 1.;
-						if (sl_i == 0)
-							p1 = -im * config.l.parity(i);
-						if (sl_j == 0)
-							p2 = -im * config.l.parity(j);
-						if (sl_m == 0)
-							p3 = im * config.l.parity(m);
-						if (sl_n == 0)
-							p4 = im * config.l.parity(n);
-						auto& r_i = config.l.real_space_coord(i);
-						auto& r_j = config.l.real_space_coord(j);
-						auto& r_m = config.l.real_space_coord(m);
-						auto& r_n = config.l.real_space_coord(n);
-						double kdot = K.dot(r_i - r_j - r_m + r_n);
-						expKdot[j][m][n] = p1 * p2 * p3 * p4 * std::exp(im * kdot);
-					}
-	}
+	{}
 	
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
 		std::complex<double> tp = 0.;
+		auto& K = config.l.symmetry_point("K");
 		std::complex<double> im = {0., 1.};
-		//for (int i = 0; i < config.l.n_sites(); ++i)
-		int i = 0;
+		/*
+		std::vector<std::complex<double>> unique_values;
+		std::vector<std::array<int, 4>> unique_sites;
+		
+		for (int i = 0; i < config.l.n_sites(); ++i)
 			for (int j = 0; j < config.l.n_sites(); ++j)
-				for (int m = 0; m < config.l.n_sites(); ++m)
-					for (int n = 0; n < config.l.n_sites(); ++n)
-						tp += expKdot[j][m][n] * (td_gf(m, i) * td_gf(n, j)
-							- td_gf(n, i) * td_gf(m, j));
-		return std::real(tp) * config.l.n_sites();
+				for (int k = 0; k < config.l.n_sites(); ++k)
+					for (int l = 0; l < config.l.n_sites(); ++l)
+					{
+						auto& r_i = config.l.real_space_coord(i);
+						auto& r_j = config.l.real_space_coord(j);
+						auto& r_k = config.l.real_space_coord(k);
+						auto& r_l = config.l.real_space_coord(l);
+						int x = i % (2*config.l.L);
+						int y = i / (2*config.l.L);
+						double kdot = K.dot(r_i - r_j + r_k - r_l);
+						
+						std::complex<double> x = std::cos(kdot) * (td_gf(i, l) * td_gf(j, k) - td_gf(i, k) * td_gf(j, l));
+						tp += x;
+						bool exists = false;
+						for (int a = 0; a < unique_values.size(); ++a)
+							if (std::abs(x - unique_values[a]) < std::pow(10., -13.))
+							{
+								exists = true;
+								break;
+							}
+						if (!exists)
+						{
+							unique_values.push_back(x);
+							unique_sites.push_back({i, j, k, l});
+						}
+					}
+		std::cout << unique_values.size() << " of " << std::pow(config.l.n_sites(), 4) << std::endl;
+		for (auto& i : unique_sites)
+			std::cout << i[0] << ", " << i[1] << ", " << i[2] << ", " << i[3] << std::endl;
+		*/
+		return std::real(tp);
 	}
 };
