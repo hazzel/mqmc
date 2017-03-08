@@ -91,13 +91,10 @@ struct wick_kekule
 						{
 							auto& a = (*kek_bonds[i])[j];
 							auto& b = (*kek_bonds[m])[n];
-							
-							double delta_im = a.first == b.first ? 1. : 0.;
-							double delta_jn = a.second == b.second ? 1. : 0.;
 
 							kek += factors[i] * factors[m]
 								* (et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
-								+ td_gf(b.first, a.first) * td_gf(b.second, a.second));
+								+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(b.first, a.first) * td_gf(b.second, a.second));
 						}
 		}
 		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
@@ -135,7 +132,7 @@ struct wick_epsilon
 				for (auto& b : config.l.bonds("nearest neighbors"))
 				{
 					ep += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
-						+ td_gf(b.first, a.first) * td_gf(b.second, a.second);
+						+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(b.first, a.first) * td_gf(b.second, a.second);
 				}
 		}
 		return std::real(ep) / std::pow(config.l.n_bonds(), 2.);
