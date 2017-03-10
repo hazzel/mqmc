@@ -132,6 +132,7 @@ class fast_update
 					build_broken_majorana_H0(broken_H0);
 				else
 					build_broken_dirac_H0(broken_H0);
+				/*
 				solver.compute(broken_H0);
 				std::vector<int> indices(n_matrix_size);
 				for (int i = 0; i < n_matrix_size; ++i)
@@ -141,11 +142,77 @@ class fast_update
 				P = dmatrix_t::Zero(n_matrix_size, n_matrix_size / 2);
 				for (int i = 0; i < n_matrix_size / 2; ++i)
 					P.col(i) = solver.eigenvectors().col(indices[i]);
+				*/
+				
+				P = symmetrize_EV(broken_H0);
 				Pt = P.adjoint();
 				stabilizer.set_P(P, Pt);
 				//std::cout << solver.eigenvalues() << std::endl;
 			}
 			stabilizer.set_method(param.use_projector);
+		}
+		
+		dmatrix_t symmetrize_EV(const dmatrix_t& H)
+		{
+			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
+			auto& S = solver.eigenvectors();
+			auto& en = solver.eigenvalues();
+			dmatrix_t pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
+			for (int i = 0; i < n_matrix_size; ++i)
+				pm(i, l.inverted_site(i)) = 1.;
+			double epsilon = std::pow(10., -12.);
+			
+			dmatrix_t S_s = S + pm * S;
+			dmatrix_t S_a = S - pm * S;
+			dmatrix_t S_so(n_matrix_size, n_matrix_size);
+			dmatrix_t S_ao(n_matrix_size, n_matrix_size);
+			dmatrix_t S_f(n_matrix_size, 2*n_matrix_size);
+			
+			for (int i = 0; i < n_matrix_size; ++i)
+			{
+				if (S_s.col(i).norm() > epsilon)
+					S_s.col(i) /= S_s.col(i).norm();
+				else
+					S_s.col(i) *= 0.;
+				if (S_a.col(i).norm() > epsilon)
+					S_a.col(i) /= S_a.col(i).norm();
+				else
+					S_a.col(i) *= 0.;
+			}
+	
+			int cnt = 0;
+			for (int i = 0; i < n_matrix_size; ++i)
+			{
+				int j;
+				for (j = i; j < n_matrix_size && std::abs(en(j)-en(i)) < epsilon ; ++j)
+				{
+					S_so.col(j) = S_s.col(j);
+					S_ao.col(j) = S_a.col(j);
+					for (int k = i; k < j; ++k)
+					{
+						S_so.col(j) -= (S_so.col(k).adjoint() * S_s.col(j)) * S_so.col(k);
+						S_ao.col(j) -= (S_ao.col(k).adjoint() * S_a.col(j)) * S_ao.col(k);
+					}
+					if (S_so.col(j).norm() > epsilon)
+					{
+						S_so.col(j) /= S_so.col(j).norm();
+						S_f.col(cnt) = S_so.col(j);
+						++cnt;
+					}
+					if (S_ao.col(j).norm() > epsilon)
+					{
+						S_ao.col(j) /= S_ao.col(j).norm();
+						S_f.col(cnt) = S_ao.col(j);
+						++cnt;
+					}
+				}
+				i = j - 1;
+			}
+			//for (int i = 0; i < n_matrix_size; ++i)
+			//	std::cout << i << ", P = " << S_f.col(i).adjoint() * pm * S_f.col(i) << ", E = " << en(i) << std::endl;
+			//for (int i = 0; i < 2*n_matrix_size; ++i)
+			//	std::cout << i << S_f.col(i).adjoint() * S_f.col(i) << std::endl;
+			return S_f.block(0, 0, n_matrix_size, n_matrix_size / 2);
 		}
 		
 		void build_majorana_H0(dmatrix_t& H0)
@@ -280,7 +347,7 @@ class fast_update
 			if (param.use_projector && param.L % 3 == 0)
 				for (auto& a : l.bonds("chern"))
 				{
-					double tp = 0.000001;
+					double tp = 0.000000;
 					H0(a.first, a.second) = {0., -tp};
 					H0(a.second, a.first) = {0., tp};
 				}
@@ -313,7 +380,7 @@ class fast_update
 			
 			for (auto& a : l.bonds("chern"))
 			{
-				double tp = 0.000001;
+				double tp = 0.000000;
 				broken_H0(a.first, a.second) = {0., -tp};
 				broken_H0(a.second, a.first) = {0., tp};
 			}
@@ -410,6 +477,11 @@ class fast_update
 			return max_tau;
 		}
 		
+		void update_tau()
+		{
+			tau += param.direction;
+		}
+		
 		int bond_index(int i, int j) const
 		{
 			return bond_indices.at({std::min(i, j), std::max(i, j)});
@@ -444,6 +516,7 @@ class fast_update
 				gf_buffer = equal_time_gf;
 			gf_buffer_partial_vertex = partial_vertex;
 			gf_buffer_tau = tau;
+			dir_buffer = param.direction;
 		}
 
 		void reset_equal_time_gf_to_buffer()
@@ -460,6 +533,7 @@ class fast_update
 				equal_time_gf = gf_buffer;
 			partial_vertex = gf_buffer_partial_vertex;
 			tau = gf_buffer_tau;
+			param.direction = dir_buffer;
 		}
 		
 		void enable_time_displaced_gf(int direction)
@@ -1152,6 +1226,7 @@ class fast_update
 		dmatrix_t W_l_buffer;
 		dmatrix_t W_r_buffer;
 		dmatrix_t W_buffer;
+		int dir_buffer;
 		int gf_buffer_partial_vertex;
 		int gf_buffer_tau;
 		dmatrix_t id;
