@@ -113,16 +113,16 @@ class fast_update
 			else
 				build_dirac_H0(H0);
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H0);
-			expH0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
-			invExpH0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
+			T = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
+			invT = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			for (int i = 0; i < expH0.rows(); ++i)
 			{
-				expH0(i, i) = std::exp(- solver.eigenvalues()[i] * param.dtau);
-				invExpH0(i, i) = std::exp(solver.eigenvalues()[i] * param.dtau);
+				T(i, i) = std::exp(- solver.eigenvalues()[i] * param.dtau);
+				invT(i, i) = std::exp(solver.eigenvalues()[i] * param.dtau);
 			}
-			expH0 = solver.eigenvectors() * expH0 * solver.eigenvectors()
+			T = solver.eigenvectors() * T * solver.eigenvectors()
 				.inverse();
-			invExpH0 = solver.eigenvectors() * invExpH0 * solver.eigenvectors()
+			invT = solver.eigenvectors() * invT * solver.eigenvectors()
 				.inverse();
 			
 			if (param.use_projector)
@@ -589,6 +589,30 @@ class fast_update
 				}
 			}
 		}
+		
+		void multiply_T_matrix()
+		{
+			if (param.use_projector)
+			{
+				if (param.direction == 1)
+				{
+					proj_W_l = proj_W_l * invT;
+					proj_W_r = T * proj_W_r;
+				}
+				else if (param.direction == -1)
+				{
+					proj_W_l = proj_W_l * T;
+					proj_W_r = invT * proj_W_r;
+				}
+			}
+			else
+			{
+				if (param.direction == 1)
+					equal_time_gf = T * equal_time_gf * invT;
+				else if (param.direction == -1)
+					equal_time_gf = invT * equal_time_gf * T;
+			}
+		}
 
 		void multiply_vertex_from_left(dmatrix_t& m,
 			int bond_type, const arg_t& vertex, int inv)
@@ -668,28 +692,6 @@ class fast_update
 						+ old_m.col(j+ns) * (*vm)(3, 3);
 				}
 			}
-		}
-
-		void prepare_flip()
-		{
-			if (param.use_projector)
-			{
-				proj_W_l = proj_W_l * expH0;
-				proj_W_r = invExpH0 * proj_W_r;
-			}
-			else
-				equal_time_gf = invExpH0 * equal_time_gf * expH0;
-		}
-
-		void prepare_measurement()
-		{
-			if (param.use_projector)
-			{
-				proj_W_l = proj_W_l * invExpH0;
-				proj_W_r = expH0 * proj_W_r;
-			}
-			else
-				equal_time_gf = expH0 * equal_time_gf * invExpH0;
 		}
 
 		dmatrix_t propagator(int tau_n, int tau_m)
@@ -1231,8 +1233,8 @@ class fast_update
 		int gf_buffer_tau;
 		dmatrix_t id;
 		dmatrix_t id_2;
-		dmatrix_t expH0;
-		dmatrix_t invExpH0;
+		dmatrix_t T;
+		dmatrix_t invT;
 		dmatrix_t P;
 		dmatrix_t Pt;
 		dmatrix_t delta;
