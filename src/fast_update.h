@@ -38,7 +38,7 @@ class fast_update
 		using dmatrix_t = matrix_t<Eigen::Dynamic, Eigen::Dynamic>;
 		using stabilizer_t = qr_stabilizer;
 
-		fast_update(Random& rng_, const lattice& l_, const parameters& param_,
+		fast_update(Random& rng_, const lattice& l_, parameters& param_,
 			measurements& measure_)
 			: rng(rng_), l(l_), param(param_), measure(measure_), tau(1),
 				update_time_displaced_gf(false),
@@ -132,19 +132,14 @@ class fast_update
 					build_broken_majorana_H0(broken_H0);
 				else
 					build_broken_dirac_H0(broken_H0);
-				/*
-				solver.compute(broken_H0);
-				std::vector<int> indices(n_matrix_size);
-				for (int i = 0; i < n_matrix_size; ++i)
-					indices[i] = i;
-				SortIndicesInc<Eigen::VectorXd, int> inc(solver.eigenvalues());
-				std::sort(indices.begin(), indices.end(), inc);
-				P = dmatrix_t::Zero(n_matrix_size, n_matrix_size / 2);
-				for (int i = 0; i < n_matrix_size / 2; ++i)
-					P.col(i) = solver.eigenvectors().col(indices[i]);
-				*/
 
-				P = symmetrize_EV(broken_H0);
+				if (param.L % 3 == 0)
+					P = symmetrize_EV(broken_H0);
+				else
+				{
+					solver.compute(broken_H0);
+					P = solver.eigenvectors().block(0, n_matrix_size / 2, n_matrix_size, n_matrix_size / 2);
+				}
 				Pt = P.adjoint();
 				stabilizer.set_P(P, Pt);
 				//std::cout << solver.eigenvalues() << std::endl;
@@ -219,11 +214,12 @@ class fast_update
 			//	std::cout << i << ", P = " << S_f.col(i).adjoint() * pm * S_f.col(i) << ", E = " << en(i) << std::endl;
 			//for (int i = 0; i < 2*n_matrix_size; ++i)
 			//	std::cout << i << S_f.col(i).adjoint() * S_f.col(i) << std::endl;
-			return S_f.block(0, 0, n_matrix_size, n_matrix_size / 2);
+			return S_f.block(0, n_matrix_size / 2, n_matrix_size, n_matrix_size / 2);
 		}
 
 		void build_majorana_H0(dmatrix_t& H0)
 		{
+			/*
 			for (auto& a : l.bonds("nearest neighbors"))
 			{
 				if (param.L % 3 == 0 && get_bond_type(a) == 0)
@@ -236,6 +232,7 @@ class fast_update
 					H0(a.first+l.n_sites(), a.second+l.n_sites())
 						= {0., l.parity(a.first) * param.t};
 			}
+			*/
 			for (auto& a : l.bonds("d3_bonds"))
 			{
 				H0(a.first, a.second) = {0., -l.parity(a.first) * param.tprime};
@@ -267,9 +264,9 @@ class fast_update
 				//auto& kek_bonds = l.bonds("kekule");
 				//if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
 				{
-					//tp = param.t * 1.000001;
+					tp = param.t * 1.000001;
 					//tp = param.t * (0.9999+rng()*0.0002);
-					tp = param.t * 1.00000000 * std::exp(im * 0.00000);
+					//tp = param.t * 1.00000000 * std::exp(im * 0.00000);
 				}
 				else
 				{
@@ -308,8 +305,10 @@ class fast_update
 
 		void build_decoupled_majorana_vertex(int cnt, double parity, double spin)
 		{
-			double x = parity * param.lambda * spin;
-			double xp = - parity * param.lambda * spin;
+			double x = parity * (param.t * param.dtau + param.lambda * spin);
+			double xp = parity * (param.t * param.dtau - param.lambda * spin);
+			//double x = parity * param.lambda * spin;
+			//double xp = - parity * param.lambda * spin;
 			complex_t c = {std::cosh(x), 0};
 			complex_t s = {0, std::sinh(x)};
 			complex_t cp = {std::cosh(xp), 0};
@@ -718,7 +717,8 @@ class fast_update
 			for (int n = tau_n; n > tau_m; --n)
 			{
 				auto& vertex = aux_spins[n-1];
-				b *= expH0;
+				if (param.multiply_T)
+					b *= expH0;
 
 				for (int bt = 0; bt < cb_bonds.size(); ++bt)
 					multiply_vertex_from_right(b, bt, vertex, 1);
@@ -732,11 +732,13 @@ class fast_update
 			{
 				for (int bt = cb_bonds.size() - 1; bt >= 0; --bt)
 					multiply_vertex_from_left(m, bt, vertex, 1);
-				m = expH0 * m;
+				if (param.multiply_T)
+					m = expH0 * m;
 			}
 			else if (inv == -1)
 			{
-				m = invExpH0 * m;
+				if (param.multiply_T)
+					m = invExpH0 * m;
 				for (int bt = 0; bt < cb_bonds.size(); ++bt)
 					multiply_vertex_from_left(m, bt, vertex, -1);
 			}
@@ -746,7 +748,8 @@ class fast_update
 		{
 			if (inv == 1)
 			{
-				m = m * expH0;
+				if (param.multiply_T)
+					m = m * expH0;
 				for (int bt = 0; bt < cb_bonds.size(); ++bt)
 					multiply_vertex_from_right(m, bt, vertex, 1);
 			}
@@ -754,7 +757,8 @@ class fast_update
 			{
 				for (int bt = cb_bonds.size() - 1; bt >= 0; --bt)
 					multiply_vertex_from_right(m, bt, vertex, -1);
-				m = m * invExpH0;
+				if (param.multiply_T)
+					m = m * invExpH0;
 			}
 		}
 
@@ -1220,7 +1224,7 @@ class fast_update
 	private:
 		Random& rng;
 		const lattice& l;
-		const parameters& param;
+		parameters& param;
 		measurements& measure;
 		int n_intervals;
 		int tau;

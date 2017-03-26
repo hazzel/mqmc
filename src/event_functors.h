@@ -95,7 +95,7 @@ struct event_flip_all
 			config.M.prepare_flip();
 			config.M.partial_advance(0);
 			flip_cb_outer(0, 0, 4);
-				
+
 			config.M.partial_advance(1);
 			flip_cb_outer(1, 1, 3);
 
@@ -105,9 +105,10 @@ struct event_flip_all
 			config.M.partial_advance(0);
 			config.M.prepare_measurement();
 			*/
-			
-			config.M.prepare_flip();
-			
+
+			if (config.param.multiply_T)
+				config.M.prepare_flip();
+
 			for (int bt = 0; bt < config.M.n_cb_bonds(); ++bt)
 			{
 				config.M.partial_advance(bt);
@@ -115,7 +116,8 @@ struct event_flip_all
 			}
 
 			config.M.partial_advance(0);
-			config.M.prepare_measurement();
+			if (config.param.multiply_T)
+				config.M.prepare_measurement();
 		}
 	}
 };
@@ -138,7 +140,7 @@ struct event_static_measurement
 		for (int i = 0; i < observables.size(); ++i)
 		{
 			values.push_back(0.);
-			
+
 			if (observables[i] == "energy")
 				add_wick(wick_static_energy{config, rng});
 			else if (observables[i] == "h_t")
@@ -161,11 +163,11 @@ struct event_static_measurement
 				add_wick(wick_static_chern2{config, rng});
 			else if (observables[i] == "chern4")
 				add_wick(wick_static_chern4{config, rng});
-			
+
 			names.push_back(observables[i]);
 		}
 	}
-	
+
 	template<typename T>
 	void add_wick(T&& functor)
 	{
@@ -179,7 +181,7 @@ struct event_static_measurement
 
 		for (int i = 0; i < values.size(); ++i)
 			config.measure.add(names[i], values[i]);
-		
+
 		config.measure.add("sign_phase_re", std::real(config.param.sign_phase));
 		config.measure.add("sign_phase_im", std::imag(config.param.sign_phase));
 	}
@@ -204,7 +206,7 @@ struct event_dynamic_measurement
 		{
 			dyn_tau.push_back(std::vector<double>(config.param.n_discrete_tau+1,
 				0.));
-			
+
 			if (observables[i] == "M2")
 				add_wick(wick_M2{config, rng});
 			else if (observables[i] == "kekule")
@@ -219,11 +221,11 @@ struct event_dynamic_measurement
 				add_wick(wick_sp{config, rng});
 			else if (observables[i] == "tp")
 				add_wick(wick_tp{config, rng});
-			
+
 			names.push_back("dyn_"+observables[i]);
 		}
 	}
-	
+
 	template<typename T>
 	void add_wick(T&& functor)
 	{

@@ -44,7 +44,13 @@ mc::mc(const std::string& dir)
 	config.param.use_projector = (config.param.method == "projective");
 	config.param.decoupling = pars.value_or_default<std::string>("decoupling", "majorana");
 	config.param.lambda = std::acosh(std::exp(config.param.V * config.param.dtau / 2.));
-		
+
+	if (config.param.stag_mu > 0. || config.param.stag_mu < 0. || config.param.tprime > 0.
+		|| config.param.tprime < 0. || config.param.decoupling == "dirac")
+		config.param.multiply_T = true;
+	else
+		config.param.multiply_T = false;
+
 	std::string static_obs_string = pars.value_or_default<std::string>("static_obs", "M2");
 	boost::split(config.param.static_obs, static_obs_string, boost::is_any_of(","));
 	std::string obs_string = pars.value_or_default<std::string>("obs", "M2");
@@ -65,12 +71,12 @@ mc::mc(const std::string& dir)
 		config.l.generate_graph(hc);
 		hc.generate_maps(config.l);
 	}
-	
+
 	qmc.add_measure(measure_M{config, pars}, "measurement");
-	
+
 	//Initialize configuration class
 	config.initialize();
-	
+
 	//Set up events
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_flip_all{config, rng}, "flip all");
@@ -78,7 +84,7 @@ mc::mc(const std::string& dir)
 		"static_measure");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin, config.param.obs},
 		"dyn_measure");
-	
+
 	#ifdef PROFILER
 		ProfilerStart("/net/home/lxtsfs1/tpc/hesselmann/code/profiler/gperftools.prof");
 	#endif
@@ -133,14 +139,14 @@ void mc::init()
 	config.measure.add_observable("chern4", n_prebin);
 	config.measure.add_vectorobservable("corr", config.l.max_distance() + 1,
 		n_prebin);
-	
+
 	if (config.param.n_discrete_tau > 0)
 		for (int i = 0; i < config.param.obs.size(); ++i)
 		{
 			config.measure.add_vectorobservable("dyn_"+config.param.obs[i]+"_tau",
 				config.param.n_discrete_tau + 1, n_prebin);
 		}
-	
+
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }
@@ -266,7 +272,7 @@ void mc::do_update()
 			config.M.advance_forward();
 			qmc.trigger_event("flip all");
 			config.M.stabilize_forward();
-			
+
 			if (is_thermalized())
 			{
 				if (!config.param.use_projector || (config.param.use_projector

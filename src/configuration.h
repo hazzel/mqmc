@@ -58,11 +58,11 @@ struct arg_t
 {
 	std::vector<int> sigma;
 	int int_size = 8 * sizeof(int);
-	
+
 	arg_t(int size = 0)
 		: sigma(size, 0)
 	{}
-	
+
 	double get(int i) const
 	{
 		int n = i / int_size;
@@ -74,13 +74,13 @@ struct arg_t
 		int n = i / int_size;
 		sigma[n] = set_bit(sigma[n], i % int_size);
 	}
-	
+
 	void flip(int i)
 	{
 		int n = i / int_size;
 		sigma[n] = invert_bit(sigma[n], i % int_size);
 	}
-	
+
 	void serialize(odump& out)
 	{
 		int size = sigma.size();
@@ -99,7 +99,7 @@ struct arg_t
 			sigma[k] = i;
 		}
 	}
-	
+
 private:
 	int set_bit(int integer, int offset) const
 	{
@@ -131,9 +131,9 @@ struct configuration
 
 	configuration(Random& rng_, measurements& measure_)
 		: rng(rng_), l(), param(), measure(measure_), M(fast_update<arg_t>(rng, l, param, measure))
-			
+
 	{}
-	
+
 	void initialize()
 	{
 		shellsize.resize(l.max_distance() + 1, 0);
