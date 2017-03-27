@@ -133,12 +133,12 @@ class fast_update
 				else
 					build_broken_dirac_H0(broken_H0);
 
-				if (param.L % 3 == 0)
+				if (param.L % 3 == 0 && param.decoupling == "dirac")
 					P = symmetrize_EV(broken_H0);
 				else
 				{
 					solver.compute(broken_H0);
-					P = solver.eigenvectors().block(0, n_matrix_size / 2, n_matrix_size, n_matrix_size / 2);
+					P = solver.eigenvectors().block(0, 0, n_matrix_size, n_matrix_size / 2);
 				}
 				Pt = P.adjoint();
 				stabilizer.set_P(P, Pt);
@@ -214,7 +214,7 @@ class fast_update
 			//	std::cout << i << ", P = " << S_f.col(i).adjoint() * pm * S_f.col(i) << ", E = " << en(i) << std::endl;
 			//for (int i = 0; i < 2*n_matrix_size; ++i)
 			//	std::cout << i << S_f.col(i).adjoint() * S_f.col(i) << std::endl;
-			return S_f.block(0, n_matrix_size / 2, n_matrix_size, n_matrix_size / 2);
+			return S_f.block(0, 0, n_matrix_size, n_matrix_size / 2);
 		}
 
 		void build_majorana_H0(dmatrix_t& H0)
@@ -264,8 +264,8 @@ class fast_update
 				//auto& kek_bonds = l.bonds("kekule");
 				//if (param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), a) != kek_bonds.end())
 				{
-					tp = param.t * 1.000001;
-					//tp = param.t * (0.9999+rng()*0.0002);
+					//tp = param.t * 1.000001;
+					tp = param.t * (0.9999+rng()*0.0002);
 					//tp = param.t * 1.00000000 * std::exp(im * 0.00000);
 				}
 				else
@@ -303,8 +303,14 @@ class fast_update
 				}
 		}
 
-		void build_decoupled_majorana_vertex(int cnt, double parity, double spin)
+		void build_decoupled_majorana_vertex(int cnt, double parity, double spin,
+			bool symmetry_broken)
 		{
+			double tp;
+			if (symmetry_broken)
+				tp = param.t * 1.000001;
+			else
+				tp = param.t;
 			double x = parity * (param.t * param.dtau + param.lambda * spin);
 			double xp = parity * (param.t * param.dtau - param.lambda * spin);
 			//double x = parity * param.lambda * spin;
@@ -424,13 +430,14 @@ class fast_update
 			inv_vertex_matrices.resize(8, dmatrix_t(n_vertex_size, n_vertex_size));
 			delta_matrices.resize(8, dmatrix_t(n_vertex_size, n_vertex_size));
 			int cnt = 0;
+			for (bool symmetry_broken : {true, false})
 			for (double parity : {1., -1.})
 				for (double spin : {1., -1.})
 				{
 					if (param.decoupling == "majorana")
 					{
 						if (decoupled)
-							build_decoupled_majorana_vertex(cnt, parity, spin);
+							build_decoupled_majorana_vertex(cnt, parity, spin, symmetry_broken);
 						else
 							build_coupled_majorana_vertex(cnt, parity, spin);
 					}
@@ -454,19 +461,40 @@ class fast_update
 		dmatrix_t& get_vertex_matrix(int i, int j, int s)
 		{
 			// Assume i < j and fix sublattice 0 => p=1
-			return vertex_matrices[i%2*2 + static_cast<int>(s<0)];
+			int symmetry_broken = (get_bond_type({i, j}) == 0 ? 1 : 0);
+			//int symmetry_broken;
+			//auto& kek_bonds = l.bonds("kekule");
+			//if (param.use_projector && param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), std::make_pair(i, j)) != kek_bonds.end())
+			//	symmetry_broken = 1;
+			//else
+			//	symmetry_broken = 0;
+			return vertex_matrices[4*symmetry_broken+i%2*2 + static_cast<int>(s<0)];
 		}
 
 		dmatrix_t& get_inv_vertex_matrix(int i, int j, int s)
 		{
 			// Assume i < j and fix sublattice 0 => p=1
-			return inv_vertex_matrices[i%2*2 + static_cast<int>(s<0)];
+			int symmetry_broken = (get_bond_type({i, j}) == 0 ? 1 : 0);
+			//int symmetry_broken;
+			//auto& kek_bonds = l.bonds("kekule");
+			//if (param.use_projector && param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), std::make_pair(i, j)) != kek_bonds.end())
+			//	symmetry_broken = 1;
+			//else
+			//	symmetry_broken = 0;
+			return inv_vertex_matrices[4*symmetry_broken+i%2*2 + static_cast<int>(s<0)];
 		}
 
 		dmatrix_t& get_delta_matrix(int i, int j, int s)
 		{
 			// Assume i < j and fix sublattice 0 => p=1
-			return delta_matrices[i%2*2 + static_cast<int>(s<0)];
+			int symmetry_broken = (get_bond_type({i, j}) == 0 ? 1 : 0);
+			//int symmetry_broken;
+			//auto& kek_bonds = l.bonds("kekule");
+			//if (param.use_projector && param.L % 3 == 0 && std::find(kek_bonds.begin(), kek_bonds.end(), std::make_pair(i, j)) != kek_bonds.end())
+			//	symmetry_broken = 1;
+			//else
+			//	symmetry_broken = 0;
+			return delta_matrices[4*symmetry_broken+i%2*2 + static_cast<int>(s<0)];
 		}
 
 		int get_bond_type(const std::pair<int, int>& bond) const
