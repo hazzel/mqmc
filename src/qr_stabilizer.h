@@ -171,7 +171,7 @@ class qr_stabilizer
 				
 				double ne = (old_gf - equal_time_gf).norm();
 				if (ne > std::pow(10., -6.))
-					std::cout << "Norm error: " << ne << std::endl;
+					std::cout << "Forward norm error: " << ne << std::endl;
 				norm_error = ne / (n_error + 1)
 					+ n_error * norm_error / (n_error + 1);
 				++n_error;
@@ -202,7 +202,7 @@ class qr_stabilizer
 					recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1],
 						V[n+1]);
 			}
-			if (n == n_intervals - 1)
+			//if (n == n_intervals - 1)
 			{
 				measure.add("norm_error", norm_error);
 				norm_error = 0.;
@@ -220,7 +220,7 @@ class qr_stabilizer
 				proj_U_l[n-1] = r * qr_solver.colsPermutation().transpose();
 				for (int i = 0; i < proj_U_l[n-1].rows(); ++i)
 					proj_U_l[n-1].row(i) = 1./qr_solver.matrixQR()(i, i) * proj_U_l[n-1].row(i);
-				
+					
 				dmatrix_t old_gf = id_N;
 				old_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
 				proj_W_r = proj_U_r[n-1];
@@ -234,7 +234,7 @@ class qr_stabilizer
 				
 				double ne = (old_gf - equal_time_gf).norm();
 				if (ne > std::pow(10., -6.))
-					std::cout << "Norm error: " << ne << std::endl;
+					std::cout << "Backward norm error: " << ne << std::endl;
 				norm_error = ne / (n_error + 1)
 					+ n_error * norm_error / (n_error + 1);
 				++n_error;
@@ -265,7 +265,7 @@ class qr_stabilizer
 					recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r,
 						D_r, V_r);
 			}
-			if (n == 1)
+			//if (n == 1)
 			{
 				measure.add("norm_error", norm_error);
 				norm_error = 0.;
