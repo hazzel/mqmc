@@ -202,7 +202,7 @@ class qr_stabilizer
 					recompute_equal_time_gf(U_l, D_l, V_l, U[n+1], D[n+1],
 						V[n+1]);
 			}
-			//if (n == n_intervals - 1)
+			if (n == n_intervals - 1)
 			{
 				measure.add("norm_error", norm_error);
 				norm_error = 0.;
@@ -265,7 +265,7 @@ class qr_stabilizer
 					recompute_equal_time_gf(U[n-1], D[n-1], V[n-1], U_r,
 						D_r, V_r);
 			}
-			//if (n == 1)
+			if (n == 1)
 			{
 				measure.add("norm_error", norm_error);
 				norm_error = 0.;
