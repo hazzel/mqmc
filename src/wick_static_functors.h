@@ -213,13 +213,13 @@ struct wick_static_S_chern_q
 	double get_obs(const matrix_t& et_gf)
 	{
 		std::complex<double> S = 0., im = {0., 1.};
+		auto& q = config.l.symmetry_point("q");
 		for (auto& a : config.l.bonds("chern"))
 		{
 			auto& r_i = config.l.real_space_coord(a.first);
 			for (auto& b : config.l.bonds("chern"))
 			{
 				auto& r_j = config.l.real_space_coord(b.first);
-				auto& q = config.l.symmetry_point("q");
 				double qr = q.dot(r_i - r_j);
 				S -= (et_gf(a.second, a.first) * et_gf(b.second, b.first)
 					+ et_gf(b.second, a.first) * et_gf(b.first, a.second)
@@ -528,6 +528,7 @@ struct wick_static_S_cdw_q
 	{
 		double S = 0.;
 		std::complex<double> im = {0., 1.};
+		auto& q = config.l.symmetry_point("q");
 		if (config.param.decoupling == "majorana")
 		{
 			for (int i = 0; i < config.l.n_sites(); ++i)
@@ -536,7 +537,6 @@ struct wick_static_S_cdw_q
 				for (int j = 0; j < config.l.n_sites(); ++j)
 				{
 					auto& r_j = config.l.real_space_coord(j);
-					auto& q = config.l.symmetry_point("q");
 					double qr = q.dot(r_i - r_j);
 					S += config.l.parity(i) * config.l.parity(j) * std::real(et_gf(i, j)
 							* et_gf(i, j) * (std::cos(qr) + im * std::sin(qr)));
