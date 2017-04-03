@@ -44,6 +44,7 @@ mc::mc(const std::string& dir)
 	config.param.decoupling = pars.value_or_default<std::string>("decoupling", "majorana");
 	config.param.lambda = std::acosh(std::exp(config.param.V * config.param.dtau / 2.));
 	config.param.inv_symmetry = pars.value_or_default<int>("inv_symmetry", 1);
+	config.param.n_flavor = pars.value_or_default<int>("flavor", 1);
 
 	if (config.param.stag_mu > 0. || config.param.stag_mu < 0. || config.param.tprime > 0.
 		|| config.param.tprime < 0. || config.param.decoupling == "dirac")

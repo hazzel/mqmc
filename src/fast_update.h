@@ -48,6 +48,7 @@ class fast_update
 
 		void serialize(odump& out)
 		{
+			/*
 			int size = aux_spins.size();
 			int cnt = 0;
 			out.write(size);
@@ -56,10 +57,18 @@ class fast_update
 				v.serialize(out);
 				++cnt;
 			}
+			*/
+			int size = aux_spins.num_elements();
+			out.write(size);
+			for (int i = 0; i < aux_spins.shape()[0]; ++i)
+				for (int j = 0; j < aux_spins.shape()[1]; ++j)
+					for (int k = 0; k < aux_spins.shape()[2]; ++k)
+						aux_spins[i][j][k].serialize(out);
 		}
 
 		void serialize(idump& in)
 		{
+			/*
 			int size; in.read(size);
 			aux_spins.resize(size);
 			for (int i = 0; i < size; ++i)
@@ -69,6 +78,23 @@ class fast_update
 				aux_spins[i] = v;
 			}
 			max_tau = size;
+			tau = max_tau;
+			partial_vertex = 0;
+			n_intervals = max_tau / param.n_delta;
+			stabilizer.resize(n_intervals, n_matrix_size);
+			rebuild();
+			*/
+			int size; in.read(size);
+			aux_spins.resize(boost::extents[param.n_flavor][param.n_flavor][param.n_tau_slices]);
+			for (int i = 0; i < aux_spins.shape()[0]; ++i)
+				for (int j = 0; j < aux_spins.shape()[1]; ++j)
+					for (int k = 0; k < aux_spins.shape()[2]; ++k)
+					{
+						arg_t v;
+						v.serialize(in);
+						aux_spins[i][j][k] = v;
+					}
+			max_tau = param.n_tau_slices;
 			tau = max_tau;
 			partial_vertex = 0;
 			n_intervals = max_tau / param.n_delta;
@@ -89,7 +115,7 @@ class fast_update
 				decoupled = true;
 
 			n_vertex_size = decoupled ? 2 : 4;
-			n_matrix_size = decoupled ? l.n_sites() : 2*l.n_sites();
+			n_matrix_size = decoupled ? param.n_flavor*l.n_sites() : param.n_flavor*2*l.n_sites();
 
 			if (param.geometry == "hex")
 				cb_bonds.resize(2);
@@ -152,8 +178,12 @@ class fast_update
 			auto& S = solver.eigenvectors();
 			auto& en = solver.eigenvalues();
 			dmatrix_t pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
-			for (int i = 0; i < n_matrix_size; ++i)
-				pm(i, l.inverted_site(i)) = 1.;
+			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
+			{
+				int as = alpha * l.n_sites();
+				for (int i = 0; i < l.n_sites(); ++i)
+					pm(i+as, l.inverted_site(i)+as) = 1.;
+			}
 			double epsilon = std::pow(10., -5.);
 
 			dmatrix_t S_s = S + pm * S;
@@ -329,34 +359,42 @@ class fast_update
 
 		void build_dirac_H0(dmatrix_t& H0)
 		{
-			for (auto& a : l.bonds("nearest neighbors"))
-				H0(a.first, a.second) = {-param.t, 0.};
-			for (auto& a : l.bonds("d3_bonds"))
-				H0(a.first, a.second) = {-param.tprime, 0.};
-			for (int i = 0; i < l.n_sites(); ++i)
-				H0(i, i) = l.parity(i) * param.stag_mu + param.mu;
+			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
+			{
+				int as = alpha * l.n_sites();
+				for (auto& a : l.bonds("nearest neighbors"))
+					H0(a.first+as, a.second+as) = {-param.t, 0.};
+				for (auto& a : l.bonds("d3_bonds"))
+					H0(a.first+as, a.second+as) = {-param.tprime, 0.};
+				for (int i = 0; i < l.n_sites(); ++i)
+					H0(i+as, i+as) = l.parity(i) * param.stag_mu + param.mu;
+			}
 		}
 
 		void build_broken_dirac_H0(dmatrix_t& broken_H0)
 		{
-			for (auto& a : l.bonds("nearest neighbors"))
-				broken_H0(a.first, a.second) = {-param.t, 0.};
-			for (auto& a : l.bonds("d3_bonds"))
-				broken_H0(a.first, a.second) = {-param.tprime, 0.};
-			for (int i = 0; i < l.n_sites(); ++i)
-					broken_H0(i, i) = l.parity(i) * param.stag_mu;
+			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
+			{
+				int as = alpha * l.n_sites();
+				for (auto& a : l.bonds("nearest neighbors"))
+					broken_H0(a.first+as, a.second+as) = {-param.t, 0.};
+				for (auto& a : l.bonds("d3_bonds"))
+					broken_H0(a.first+as, a.second+as) = {-param.tprime, 0.};
+				for (int i = 0; i < l.n_sites(); ++i)
+					broken_H0(i+as, i+as) = l.parity(i) * param.stag_mu + param.mu;
 
-			for (auto& a : l.bonds("chern"))
-			{
-				double tp = 0.000001;
-				broken_H0(a.first, a.second) = {0., -tp};
-				broken_H0(a.second, a.first) = {0., tp};
-			}
-			for (auto& a : l.bonds("chern_2"))
-			{
-				double tp = 0.000001;
-				broken_H0(a.first, a.second) = {0., -tp};
-				broken_H0(a.second, a.first) = {0., tp};
+				for (auto& a : l.bonds("chern"))
+				{
+					double tp = 0.000001;
+					broken_H0(a.first+as, a.second+as) = {0., -tp};
+					broken_H0(a.second+as, a.first+as) = {0., tp};
+				}
+				for (auto& a : l.bonds("chern_2"))
+				{
+					double tp = 0.000001;
+					broken_H0(a.first+as, a.second+as) = {0., -tp};
+					broken_H0(a.second+as, a.first+as) = {0., tp};
+				}
 			}
 		}
 
@@ -455,9 +493,14 @@ class fast_update
 			return partial_vertex;
 		}
 
-		const arg_t& vertex(int index)
+		const arg_t& get_spins(int t, int alpha=0, int beta=0) const
 		{
-			return aux_spins[index-1];
+			return aux_spins[alpha][beta][t-1];
+		}
+		
+		arg_t& get_spins(int t, int alpha=0, int beta=0)
+		{
+			return aux_spins[alpha][beta][t-1];
 		}
 
 		int get_tau()
@@ -490,9 +533,9 @@ class fast_update
 			return cb_bonds[i];
 		}
 
-		void flip_spin(const std::pair<int, int>& b)
+		void flip_spin(const std::pair<int, int>& b, int alpha = 0, int beta = 0)
 		{
-			aux_spins[tau-1].flip(bond_index(b.first, b.second));
+			get_spins(tau, alpha, beta).flip(bond_index(b.first, b.second));
 		}
 
 		void buffer_equal_time_gf()
@@ -541,10 +584,12 @@ class fast_update
 			stabilizer.disable_time_displaced_gf();
 		}
 
-		void build(std::vector<arg_t>& args)
+		void build(boost::multi_array<arg_t, 3>& args)
 		{
-			aux_spins.swap(args);
-			max_tau = aux_spins.size();
+			//aux_spins.swap(args);
+			aux_spins.resize(boost::extents[args.shape()[0]][args.shape()[1]][args.shape()[2]]);
+			aux_spins = args;
+			max_tau = param.n_tau_slices;
 			tau = max_tau;
 			partial_vertex = 0;
 			n_intervals = max_tau / param.n_delta;
@@ -588,38 +633,41 @@ class fast_update
 		{
 			dmatrix_t old_m = m;
 			m.setZero();
-			for (int i = 0; i < l.n_sites(); ++i)
-			{
-				int j = cb_bonds[bond_type][i];
-				if (i > j) continue;
-				double sigma = vertex.get(bond_index(i, j));
-				dmatrix_t* vm;
-				if(inv == 1)
-					vm = &get_vertex_matrix(i, j, sigma);
-				else
-					vm = &get_inv_vertex_matrix(i, j, sigma);
-				if (decoupled)
-				{
-					m.row(i).noalias() = old_m.row(i) * (*vm)(0, 0) + old_m.row(j) * (*vm)(0, 1);
-					m.row(j).noalias() = old_m.row(i) * (*vm)(1, 0) + old_m.row(j) * (*vm)(1, 1);
-				}
-				else
-				{
-					int ns = l.n_sites();
-					m.row(i).noalias() = old_m.row(i) * (*vm)(0, 0)
-						+ old_m.row(j) * (*vm)(0, 1) + old_m.row(i+ns) * (*vm)(0, 2)
-						+ old_m.row(j+ns) * (*vm)(0, 3);
-					m.row(j).noalias() = old_m.row(i) * (*vm)(1, 0)
-						+ old_m.row(j) * (*vm)(1, 1) + old_m.row(i+ns) * (*vm)(1, 2)
-						+ old_m.row(j+ns) * (*vm)(1, 3);
-					m.row(i+ns).noalias() = old_m.row(i) * (*vm)(2, 0)
-						+ old_m.row(j) * (*vm)(2, 1) + old_m.row(i+ns) * (*vm)(2, 2)
-						+ old_m.row(j+ns) * (*vm)(2, 3);
-					m.row(j+ns).noalias() = old_m.row(i) * (*vm)(3, 0)
-						+ old_m.row(j) * (*vm)(3, 1) + old_m.row(i+ns) * (*vm)(3, 2)
-						+ old_m.row(j+ns) * (*vm)(3, 3);
-				}
-			}
+			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
+				for (int beta = 0; beta < param.n_flavor; ++beta)
+					for (int i = 0; i < l.n_sites(); ++i)
+					{
+						int j = cb_bonds[bond_type][i];
+						if (i > j) continue;
+						double sigma = vertex.get(bond_index(i, j));
+						dmatrix_t* vm;
+						if(inv == 1)
+							vm = &get_vertex_matrix(i, j, sigma);
+						else
+							vm = &get_inv_vertex_matrix(i, j, sigma);
+						int as = alpha * l.n_sites(), bs = beta * l.n_sites();
+						if (decoupled)
+						{
+							m.row(i+as).noalias() = old_m.row(i+as) * (*vm)(0, 0) + old_m.row(j+bs) * (*vm)(0, 1);
+							m.row(j+bs).noalias() = old_m.row(i+as) * (*vm)(1, 0) + old_m.row(j+bs) * (*vm)(1, 1);
+						}
+						else
+						{
+							int ns = l.n_sites();
+							m.row(i+as).noalias() = old_m.row(i+as) * (*vm)(0, 0)
+								+ old_m.row(j+bs) * (*vm)(0, 1) + old_m.row(i+ns+as) * (*vm)(0, 2)
+								+ old_m.row(j+ns+bs) * (*vm)(0, 3);
+							m.row(j+bs).noalias() = old_m.row(i+as) * (*vm)(1, 0)
+								+ old_m.row(j+bs) * (*vm)(1, 1) + old_m.row(i+ns) * (*vm)(1, 2)
+								+ old_m.row(j+ns+bs) * (*vm)(1, 3);
+							m.row(i+ns+as).noalias() = old_m.row(i+as) * (*vm)(2, 0)
+								+ old_m.row(j+bs) * (*vm)(2, 1) + old_m.row(i+ns+as) * (*vm)(2, 2)
+								+ old_m.row(j+ns+bs) * (*vm)(2, 3);
+							m.row(j+ns+bs).noalias() = old_m.row(i+as) * (*vm)(3, 0)
+								+ old_m.row(j+bs) * (*vm)(3, 1) + old_m.row(i+ns+as) * (*vm)(3, 2)
+								+ old_m.row(j+ns+bs) * (*vm)(3, 3);
+						}
+					}
 		}
 
 		void multiply_vertex_from_right(dmatrix_t& m,
@@ -627,40 +675,43 @@ class fast_update
 		{
 			dmatrix_t old_m = m;
 			m.setZero();
-			for (int i = 0; i < l.n_sites(); ++i)
-			{
-				int j = cb_bonds[bond_type][i];
-				if (i > j) continue;
-				double sigma = vertex.get(bond_index(i, j));
-				dmatrix_t* vm;
-				if(inv == 1)
-					vm = &get_vertex_matrix(i, j, sigma);
-				else
-					vm = &get_inv_vertex_matrix(i, j, sigma);
-				if (decoupled)
-				{
-					m.col(i).noalias() = old_m.col(i) * (*vm)(0, 0)
-						+ old_m.col(j) * (*vm)(1, 0);
-					m.col(j).noalias() = old_m.col(i) * (*vm)(0, 1)
-						+ old_m.col(j) * (*vm)(1, 1);
-				}
-				else
-				{
-					int ns = l.n_sites();
-					m.col(i).noalias() = old_m.col(i) * (*vm)(0, 0)
-						+ old_m.col(j) * (*vm)(1, 0) + old_m.col(i+ns) * (*vm)(2, 0)
-						+ old_m.col(j+ns) * (*vm)(3, 0);
-					m.col(j).noalias() = old_m.col(i) * (*vm)(0, 1)
-						+ old_m.col(j) * (*vm)(1, 1) + old_m.col(i+ns) * (*vm)(2, 1)
-						+ old_m.col(j+ns) * (*vm)(3, 1);
-					m.col(i+ns).noalias() = old_m.col(i) * (*vm)(0, 2)
-						+ old_m.col(j) * (*vm)(1, 2) + old_m.col(i+ns) * (*vm)(2, 2)
-						+ old_m.col(j+ns) * (*vm)(3, 2);
-					m.col(j+ns).noalias() = old_m.col(i) * (*vm)(0, 3)
-						+ old_m.col(j) * (*vm)(1, 3) + old_m.col(i+ns) * (*vm)(2, 3)
-						+ old_m.col(j+ns) * (*vm)(3, 3);
-				}
-			}
+			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
+				for (int beta = 0; beta < param.n_flavor; ++beta)
+					for (int i = 0; i < l.n_sites(); ++i)
+					{
+						int j = cb_bonds[bond_type][i];
+						if (i > j) continue;
+						double sigma = vertex.get(bond_index(i, j));
+						dmatrix_t* vm;
+						if(inv == 1)
+							vm = &get_vertex_matrix(i, j, sigma);
+						else
+							vm = &get_inv_vertex_matrix(i, j, sigma);
+						int as = alpha * l.n_sites(), bs = beta * l.n_sites();
+						if (decoupled)
+						{
+							m.col(i+as).noalias() = old_m.col(i+as) * (*vm)(0, 0)
+								+ old_m.col(j+bs) * (*vm)(1, 0);
+							m.col(j+bs).noalias() = old_m.col(i+as) * (*vm)(0, 1)
+								+ old_m.col(j+bs) * (*vm)(1, 1);
+						}
+						else
+						{
+							int ns = l.n_sites();
+							m.col(i+as).noalias() = old_m.col(i+as) * (*vm)(0, 0)
+								+ old_m.col(j+bs) * (*vm)(1, 0) + old_m.col(i+ns+as) * (*vm)(2, 0)
+								+ old_m.col(j+ns+bs) * (*vm)(3, 0);
+							m.col(j+bs).noalias() = old_m.col(i+as) * (*vm)(0, 1)
+								+ old_m.col(j+bs) * (*vm)(1, 1) + old_m.col(i+ns+as) * (*vm)(2, 1)
+								+ old_m.col(j+ns+bs) * (*vm)(3, 1);
+							m.col(i+ns+as).noalias() = old_m.col(i+as) * (*vm)(0, 2)
+								+ old_m.col(j+bs) * (*vm)(1, 2) + old_m.col(i+ns+as) * (*vm)(2, 2)
+								+ old_m.col(j+ns+bs) * (*vm)(3, 2);
+							m.col(j+ns+bs).noalias() = old_m.col(i+as) * (*vm)(0, 3)
+								+ old_m.col(j+bs) * (*vm)(1, 3) + old_m.col(i+ns+as) * (*vm)(2, 3)
+								+ old_m.col(j+ns+bs) * (*vm)(3, 3);
+						}
+					}
 		}
 
 		void prepare_flip()
@@ -690,12 +741,16 @@ class fast_update
 			dmatrix_t b = id;
 			for (int n = tau_n; n > tau_m; --n)
 			{
-				auto& vertex = aux_spins[n-1];
 				if (param.multiply_T)
 					b *= expH0;
-
-				for (int bt = 0; bt < cb_bonds.size(); ++bt)
-					multiply_vertex_from_right(b, bt, vertex, 1);
+				
+				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
+					for (int beta = 0; beta < param.n_flavor; ++beta)
+					{
+						auto& vertex = get_spins(n, alpha, beta);
+						for (int bt = 0; bt < cb_bonds.size(); ++bt)
+							multiply_vertex_from_right(b, bt, vertex, 1);
+					}
 			}
 			return b;
 		}
@@ -736,10 +791,10 @@ class fast_update
 			}
 		}
 
-		void partial_advance(int partial_n)
+		void partial_advance(int partial_n, int alpha = 0, int beta = 0)
 		{
 			int& p = partial_vertex;
-			auto& vertex = aux_spins[tau-1];
+			auto& vertex = get_spins(tau, alpha, beta);
 			while (partial_n > p)
 			{
 				int bond_type = (p < cb_bonds.size()) ? p : 2*(cb_bonds.size()-1)-p;
@@ -782,37 +837,45 @@ class fast_update
 
 		void advance_forward()
 		{
-			auto& vertex = aux_spins[tau];
-			if (param.use_projector)
-			{
-				multiply_propagator_from_left(proj_W_r, vertex, 1);
-				multiply_propagator_from_right(proj_W_l, vertex, -1);
-			}
-			else
-			{
-				if (update_time_displaced_gf)
-					multiply_propagator_from_left(time_displaced_gf, vertex, 1);
-				multiply_propagator_from_left(equal_time_gf, vertex, 1);
-				multiply_propagator_from_right(equal_time_gf, vertex, -1);
-			}
+			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
+				for (int beta = 0; beta < param.n_flavor; ++beta)
+				{
+					auto& vertex = get_spins(tau + 1, alpha, beta);
+					if (param.use_projector)
+					{
+						multiply_propagator_from_left(proj_W_r, vertex, 1);
+						multiply_propagator_from_right(proj_W_l, vertex, -1);
+					}
+					else
+					{
+						if (update_time_displaced_gf)
+							multiply_propagator_from_left(time_displaced_gf, vertex, 1);
+						multiply_propagator_from_left(equal_time_gf, vertex, 1);
+						multiply_propagator_from_right(equal_time_gf, vertex, -1);
+					}
+				}
 			++tau;
 		}
 
 		void advance_backward()
 		{
-			auto& vertex = aux_spins[tau - 1];
-			if (param.use_projector)
-			{
-				multiply_propagator_from_left(proj_W_r, vertex, -1);
-				multiply_propagator_from_right(proj_W_l, vertex, 1);
-			}
-			else
-			{
-				if (update_time_displaced_gf)
-					multiply_propagator_from_right(time_displaced_gf, vertex, 1);
-				multiply_propagator_from_left(equal_time_gf, vertex, -1);
-				multiply_propagator_from_right(equal_time_gf, vertex, 1);
-			}
+			for (int alpha = param.n_flavor - 1; alpha >= 0; --alpha)
+				for (int beta = param.n_flavor - 1; beta >= 0; --beta)
+				{
+					auto& vertex = get_spins(tau, alpha, beta);
+					if (param.use_projector)
+					{
+						multiply_propagator_from_left(proj_W_r, vertex, -1);
+						multiply_propagator_from_right(proj_W_l, vertex, 1);
+					}
+					else
+					{
+						if (update_time_displaced_gf)
+							multiply_propagator_from_right(time_displaced_gf, vertex, 1);
+						multiply_propagator_from_left(equal_time_gf, vertex, -1);
+						multiply_propagator_from_right(equal_time_gf, vertex, 1);
+					}
+				}
 			--tau;
 		}
 
@@ -836,13 +899,15 @@ class fast_update
 			stabilizer.stabilize_backward(n, b);
 		}
 
-		complex_t try_ising_flip(int i, int j)
+		complex_t try_ising_flip(int i, int j, int alpha = 0, int beta = 0)
 		{
-			auto& vertex = aux_spins[tau-1];
+			auto& vertex = get_spins(tau, alpha, beta);
 			double sigma = vertex.get(bond_index(i, j));
 			int m = std::min(i, j), n = std::max(i, j);
-			last_flip = {m, n};
 			delta = get_delta_matrix(m, n, sigma);
+			m += alpha * l.n_sites();
+			n += beta * l.n_sites();
+			last_flip = {m, n};
 
 			if (param.use_projector)
 			{
@@ -1204,9 +1269,8 @@ class fast_update
 		int tau;
 		int partial_vertex;
 		int max_tau;
-		std::vector<arg_t> aux_spins;
+		boost::multi_array<arg_t, 3> aux_spins;
 		std::map<std::pair<int, int>, int> bond_indices;
-		std::vector<arg_t> arg_buffer;
 		std::vector<int> pos_buffer;
 		bool update_time_displaced_gf;
 		bool decoupled;

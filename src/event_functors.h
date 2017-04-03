@@ -16,16 +16,19 @@ struct event_build
 
 	void trigger()
 	{
-		std::vector<arg_t> initial_vertices(
-			config.param.n_tau_slices, arg_t(config.l.n_bonds() / sizeof(int) / 8 + 1));
-		for (int t = 0; t < config.param.n_tau_slices; ++t)
-		{
-			for (int j = 0; j < config.l.n_sites(); ++j)
-				for (int k = j; k < config.l.n_sites(); ++k)
-					if (config.l.distance(j, k) == 1)
-						if (rng() < 0.5)
-							initial_vertices[t].set(config.M.bond_index(j, k));
-		}
+		boost::multi_array<arg_t, 3> initial_vertices(boost::extents[config.param.n_flavor]
+			[config.param.n_flavor][config.param.n_tau_slices]);
+		for (int i = 0; i < initial_vertices.shape()[0]; ++i)
+			for (int j = 0; j < initial_vertices.shape()[1]; ++j)
+				for (int k = 0; k < initial_vertices.shape()[2]; ++k)
+				{
+					initial_vertices[i][j][k] = arg_t(config.l.n_bonds() / sizeof(int) / 8 + 1);
+					for (int m = 0; m < config.l.n_sites(); ++m)
+						for (int n = m; n < config.l.n_sites(); ++n)
+							if (config.l.distance(m, n) == 1)
+								if (rng() < 0.5)
+									initial_vertices[i][j][k].set(config.M.bond_index(m, n));
+				}
 		config.M.build(initial_vertices);
 	}
 };
@@ -35,40 +38,7 @@ struct event_flip_all
 	configuration& config;
 	Random& rng;
 
-	void flip_cb_outer(int pv, int pv_min, int pv_max)
-	{
-		int bond_type = (pv < 3) ? pv : 4-pv;
-		for (auto& b : config.M.get_cb_bonds(bond_type))
-		{
-			if (b.first > b.second) continue;
-			std::complex<double> p_0 = config.M.try_ising_flip(b.first, b.second);
-			if (rng() < std::abs(p_0))
-			{
-				config.M.buffer_equal_time_gf();
-				config.M.update_equal_time_gf_after_flip();
-				if (config.M.get_partial_vertex() == pv_min)
-				{
-					// Perform partial advance with flipped spin
-					config.M.flip_spin(b);
-					config.M.partial_advance(pv_max);
-					// Flip back
-					config.M.flip_spin(b);
-				}
-				else
-					config.M.partial_advance(pv_min);
-				p_0 = config.M.try_ising_flip(b.first, b.second);
-				if (rng() < std::abs(p_0))
-				{
-					config.M.update_equal_time_gf_after_flip();
-					config.M.flip_spin(b);
-				}
-				else
-					config.M.reset_equal_time_gf_to_buffer();
-			}
-		}
-	}
-
-	void flip_cb_inner(int pv)
+	void flip_cb(int pv, int alpha = 0, int beta = 0)
 	{
 		int bond_type = (pv < 3) ? pv : 4-pv;
 		int cnt = 0;
@@ -76,13 +46,13 @@ struct event_flip_all
 		{
 			if (b.first > b.second) continue;
 			int s = 0;
-			std::complex<double> p_0 = config.M.try_ising_flip(b.first, b.second);
+			std::complex<double> p_0 = config.M.try_ising_flip(b.first, b.second, alpha, beta);
 			//if (config.param.mu != 0 || config.param.stag_mu != 0)
 			config.param.sign_phase *= std::exp(std::complex<double>(0, std::arg(p_0)));
 			if (rng() < std::abs(p_0))
 			{
 				config.M.update_equal_time_gf_after_flip();
-				config.M.flip_spin(b);
+				config.M.flip_spin(b, alpha, beta);
 			}
 		}
 	}
@@ -91,31 +61,20 @@ struct event_flip_all
 	{
 		if (config.param.V > 0.)
 		{
-			/*
-			config.M.prepare_flip();
-			config.M.partial_advance(0);
-			flip_cb_outer(0, 0, 4);
-
-			config.M.partial_advance(1);
-			flip_cb_outer(1, 1, 3);
-
-			config.M.partial_advance(2);
-			flip_cb_inner(2);
-
-			config.M.partial_advance(0);
-			config.M.prepare_measurement();
-			*/
-
 			if (config.param.multiply_T)
 				config.M.prepare_flip();
 
-			for (int bt = 0; bt < config.M.n_cb_bonds(); ++bt)
-			{
-				config.M.partial_advance(bt);
-				flip_cb_inner(bt);
-			}
+			for (int alpha = 0; alpha < config.param.n_flavor; ++alpha)
+				for (int beta = 0; beta < config.param.n_flavor; ++beta)
+					for (int bt = 0; bt < config.M.n_cb_bonds(); ++bt)
+					{
+						config.M.partial_advance(bt, alpha, beta);
+						flip_cb(bt, alpha, beta);
+					}
 
-			config.M.partial_advance(0);
+			for (int alpha = config.param.n_flavor - 1; alpha >= 0; --alpha)
+				for (int beta = config.param.n_flavor - 1; beta >= 0; --beta)
+					config.M.partial_advance(0, alpha, beta);
 			if (config.param.multiply_T)
 				config.M.prepare_measurement();
 		}
