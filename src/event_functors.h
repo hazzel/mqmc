@@ -38,9 +38,8 @@ struct event_flip_all
 	configuration& config;
 	Random& rng;
 
-	void flip_cb(int pv, int alpha = 0, int beta = 0)
+	void flip_cb(int bond_type, int alpha = 0, int beta = 0)
 	{
-		int bond_type = (pv < 3) ? pv : 4-pv;
 		int cnt = 0;
 		for (auto& b : config.M.get_cb_bonds(bond_type))
 		{
@@ -66,15 +65,21 @@ struct event_flip_all
 
 			for (int alpha = 0; alpha < config.param.n_flavor; ++alpha)
 				for (int beta = 0; beta < config.param.n_flavor; ++beta)
+				{
+					config.M.set_partial_vertex(0);
 					for (int bt = 0; bt < config.M.n_cb_bonds(); ++bt)
 					{
 						config.M.partial_advance(bt, alpha, beta);
 						flip_cb(bt, alpha, beta);
 					}
+				}
 
 			for (int alpha = config.param.n_flavor - 1; alpha >= 0; --alpha)
 				for (int beta = config.param.n_flavor - 1; beta >= 0; --beta)
+				{
+					config.M.set_partial_vertex(config.M.n_cb_bonds() - 1);
 					config.M.partial_advance(0, alpha, beta);
+				}
 			if (config.param.multiply_T)
 				config.M.prepare_measurement();
 		}

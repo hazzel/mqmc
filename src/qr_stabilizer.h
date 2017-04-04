@@ -142,8 +142,12 @@ class qr_stabilizer
 				proj_W_r = proj_U_r[n];
 				proj_W_l = proj_U_l[n];
 				proj_W = (proj_W_l * proj_W_r).inverse();
-				//equal_time_gf = id_N - proj_U_r[n] * (proj_U_l[n]
-				//	* proj_U_r[n]).inverse() * proj_U_l[n];
+				
+				//std::cout << "start" << std::endl;
+				//std::cout << "equal_time_gf" << std::endl;
+				//equal_time_gf = id_N - proj_W_r * proj_W * proj_W_l;
+				//std::cout << equal_time_gf << std::endl;
+				//std::cout << "---" << std::endl;
 				
 				init = true;
 			}
@@ -165,9 +169,6 @@ class qr_stabilizer
 				proj_W = (proj_W_l * proj_W_r).inverse();
 				equal_time_gf = id_N;
 				equal_time_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
-				
-				//dmatrix_t old_gf = equal_time_gf;
-				//equal_time_gf = id_N - proj_U_r[n+1] * (proj_U_l[n+1] * proj_U_r[n+1]).inverse() * proj_U_l[n+1];
 				
 				double ne = (old_gf - equal_time_gf).norm();
 				if (std::abs(ne) > std::pow(10., -6.))
@@ -232,8 +233,11 @@ class qr_stabilizer
 				equal_time_gf = id_N;
 				equal_time_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
 				
-				//dmatrix_t old_gf = equal_time_gf;
-				//equal_time_gf = id_N - proj_U_r[n-1] * (proj_U_l[n-1] * proj_U_r[n-1]).inverse() * proj_U_l[n-1];
+				std::cout << "old gf" << std::endl;
+				std::cout << old_gf << std::endl;
+				std::cout << "equal_time_gf" << std::endl;
+				std::cout << equal_time_gf << std::endl;
+				std::cout << "---" << std::endl;
 				
 				double ne = (old_gf - equal_time_gf).norm();
 				if (std::abs(ne) > std::pow(10., -6.))
@@ -295,7 +299,10 @@ class qr_stabilizer
 
 			if (init)
 			{
-				norm_error = (old_gf - equal_time_gf).norm() / (n_error + 1)
+				double ne = (old_gf - equal_time_gf).norm();
+				if (std::abs(ne) > std::pow(10., -6.))
+					std::cout << "Norm error: " << ne << std::endl;
+				norm_error = ne / (n_error + 1)
 					+ n_error * norm_error / (n_error + 1);
 				++n_error;
 			}
@@ -349,10 +356,16 @@ class qr_stabilizer
 				+ lhs.bottomRightCorner(N, N) * rhs.bottomRightCorner(N, N);
 			if (init)
 			{
-				norm_error = (old_gf - equal_time_gf).norm() / (n_error + 1)
+				double ne = (old_gf - equal_time_gf).norm();
+				if (std::abs(ne) > std::pow(10., -6.))
+					std::cout << "Norm error: " << ne << std::endl;
+				norm_error = ne / (n_error + 1)
 					+ n_error * norm_error / (n_error + 1);
 				++n_error;
-				norm_error = (old_td_gf - time_displaced_gf).norm() / (n_error + 1)
+				ne = (old_td_gf - time_displaced_gf).norm();
+				if (std::abs(ne) > std::pow(10., -6.))
+					std::cout << "TD norm error: " << ne << std::endl;
+				norm_error = ne / (n_error + 1)
 					+ n_error * norm_error / (n_error + 1);
 				++n_error;
 			}

@@ -517,6 +517,11 @@ class fast_update
 		{
 			tau += param.direction;
 		}
+		
+		void set_partial_vertex(int partial_n)
+		{
+			partial_vertex = partial_n;
+		}
 
 		int bond_index(int i, int j) const
 		{
@@ -635,17 +640,18 @@ class fast_update
 			m.setZero();
 			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 				for (int beta = 0; beta < param.n_flavor; ++beta)
+				{
+					int as = alpha * l.n_sites(), bs = beta * l.n_sites();
 					for (int i = 0; i < l.n_sites(); ++i)
 					{
 						int j = cb_bonds[bond_type][i];
-						if (i > j) continue;
+						if (i+as > j+bs) continue;
 						double sigma = vertex.get(bond_index(i, j));
 						dmatrix_t* vm;
 						if(inv == 1)
 							vm = &get_vertex_matrix(i, j, sigma);
 						else
 							vm = &get_inv_vertex_matrix(i, j, sigma);
-						int as = alpha * l.n_sites(), bs = beta * l.n_sites();
 						if (decoupled)
 						{
 							m.row(i+as).noalias() = old_m.row(i+as) * (*vm)(0, 0) + old_m.row(j+bs) * (*vm)(0, 1);
@@ -668,6 +674,7 @@ class fast_update
 								+ old_m.row(j+ns+bs) * (*vm)(3, 3);
 						}
 					}
+				}
 		}
 
 		void multiply_vertex_from_right(dmatrix_t& m,
@@ -677,17 +684,18 @@ class fast_update
 			m.setZero();
 			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 				for (int beta = 0; beta < param.n_flavor; ++beta)
+				{
+					int as = alpha * l.n_sites(), bs = beta * l.n_sites();
 					for (int i = 0; i < l.n_sites(); ++i)
 					{
 						int j = cb_bonds[bond_type][i];
-						if (i > j) continue;
+						if (i+as > j+bs) continue;
 						double sigma = vertex.get(bond_index(i, j));
 						dmatrix_t* vm;
 						if(inv == 1)
 							vm = &get_vertex_matrix(i, j, sigma);
 						else
 							vm = &get_inv_vertex_matrix(i, j, sigma);
-						int as = alpha * l.n_sites(), bs = beta * l.n_sites();
 						if (decoupled)
 						{
 							m.col(i+as).noalias() = old_m.col(i+as) * (*vm)(0, 0)
@@ -712,6 +720,7 @@ class fast_update
 								+ old_m.col(j+ns+bs) * (*vm)(3, 3);
 						}
 					}
+				}
 		}
 
 		void prepare_flip()
@@ -755,12 +764,17 @@ class fast_update
 			return b;
 		}
 
-		void multiply_propagator_from_left(dmatrix_t& m, const arg_t& vertex, int inv)
+		void multiply_propagator_from_left(dmatrix_t& m, int tau, int inv)
 		{
 			if (inv == 1)
 			{
-				for (int bt = cb_bonds.size() - 1; bt >= 0; --bt)
-					multiply_vertex_from_left(m, bt, vertex, 1);
+				for (int alpha = param.n_flavor - 1; alpha >= 0; --alpha)
+					for (int beta = param.n_flavor - 1; beta >= 0; --beta)
+					{
+						auto& vertex = get_spins(tau, alpha, beta);
+						for (int bt = cb_bonds.size() - 1; bt >= 0; --bt)
+							multiply_vertex_from_left(m, bt, vertex, 1);
+					}
 				if (param.multiply_T)
 					m = expH0 * m;
 			}
@@ -768,24 +782,39 @@ class fast_update
 			{
 				if (param.multiply_T)
 					m = invExpH0 * m;
-				for (int bt = 0; bt < cb_bonds.size(); ++bt)
-					multiply_vertex_from_left(m, bt, vertex, -1);
+				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
+					for (int beta = 0; beta < param.n_flavor; ++beta)
+					{
+						auto& vertex = get_spins(tau, alpha, beta);
+						for (int bt = 0; bt < cb_bonds.size(); ++bt)
+							multiply_vertex_from_left(m, bt, vertex, -1);
+					}
 			}
 		}
 
-		void multiply_propagator_from_right(dmatrix_t& m, const arg_t& vertex, int inv)
+		void multiply_propagator_from_right(dmatrix_t& m, int tau, int inv)
 		{
 			if (inv == 1)
 			{
 				if (param.multiply_T)
 					m = m * expH0;
-				for (int bt = 0; bt < cb_bonds.size(); ++bt)
-					multiply_vertex_from_right(m, bt, vertex, 1);
+				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
+					for (int beta = 0; beta < param.n_flavor; ++beta)
+					{
+						auto& vertex = get_spins(tau, alpha, beta);
+						for (int bt = 0; bt < cb_bonds.size(); ++bt)
+							multiply_vertex_from_right(m, bt, vertex, 1);
+					}
 			}
 			else if (inv == -1)
 			{
-				for (int bt = cb_bonds.size() - 1; bt >= 0; --bt)
-					multiply_vertex_from_right(m, bt, vertex, -1);
+				for (int alpha = param.n_flavor - 1; alpha >= 0; --alpha)
+					for (int beta = param.n_flavor - 1; beta >= 0; --beta)
+					{
+						auto& vertex = get_spins(tau, alpha, beta);
+						for (int bt = cb_bonds.size() - 1; bt >= 0; --bt)
+							multiply_vertex_from_right(m, bt, vertex, -1);
+					}
 				if (param.multiply_T)
 					m = m * invExpH0;
 			}
@@ -837,45 +866,42 @@ class fast_update
 
 		void advance_forward()
 		{
-			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
-				for (int beta = 0; beta < param.n_flavor; ++beta)
-				{
-					auto& vertex = get_spins(tau + 1, alpha, beta);
-					if (param.use_projector)
-					{
-						multiply_propagator_from_left(proj_W_r, vertex, 1);
-						multiply_propagator_from_right(proj_W_l, vertex, -1);
-					}
-					else
-					{
-						if (update_time_displaced_gf)
-							multiply_propagator_from_left(time_displaced_gf, vertex, 1);
-						multiply_propagator_from_left(equal_time_gf, vertex, 1);
-						multiply_propagator_from_right(equal_time_gf, vertex, -1);
-					}
-				}
+			if (param.use_projector)
+			{
+				multiply_propagator_from_left(proj_W_r, tau + 1, 1);
+				multiply_propagator_from_right(proj_W_l, tau + 1, -1);
+			}
+			else
+			{
+				if (update_time_displaced_gf)
+					multiply_propagator_from_left(time_displaced_gf, tau + 1, 1);
+				multiply_propagator_from_left(equal_time_gf, tau + 1, 1);
+				multiply_propagator_from_right(equal_time_gf, tau + 1, -1);
+			}
 			++tau;
 		}
 
 		void advance_backward()
 		{
-			for (int alpha = param.n_flavor - 1; alpha >= 0; --alpha)
-				for (int beta = param.n_flavor - 1; beta >= 0; --beta)
-				{
-					auto& vertex = get_spins(tau, alpha, beta);
-					if (param.use_projector)
-					{
-						multiply_propagator_from_left(proj_W_r, vertex, -1);
-						multiply_propagator_from_right(proj_W_l, vertex, 1);
-					}
-					else
-					{
-						if (update_time_displaced_gf)
-							multiply_propagator_from_right(time_displaced_gf, vertex, 1);
-						multiply_propagator_from_left(equal_time_gf, vertex, -1);
-						multiply_propagator_from_right(equal_time_gf, vertex, 1);
-					}
-				}
+			std::cout << "start backwards: equal_time_gf" << std::endl;
+			equal_time_gf = id - proj_W_r * proj_W * proj_W_l;
+			std::cout << equal_time_gf << std::endl;
+			if (param.use_projector)
+			{
+				multiply_propagator_from_left(proj_W_r, tau, -1);
+				multiply_propagator_from_right(proj_W_l, tau, 1);
+				
+				std::cout << "after backwards: equal_time_gf" << std::endl;
+				equal_time_gf = id - proj_W_r * proj_W * proj_W_l;
+				std::cout << equal_time_gf << std::endl;
+			}
+			else
+			{
+				if (update_time_displaced_gf)
+					multiply_propagator_from_right(time_displaced_gf, tau, 1);
+				multiply_propagator_from_left(equal_time_gf, tau, -1);
+				multiply_propagator_from_right(equal_time_gf, tau, 1);
+			}
 			--tau;
 		}
 
@@ -986,7 +1012,7 @@ class fast_update
 		void update_equal_time_gf_after_flip()
 		{
 			int indices[2] = {last_flip.first, last_flip.second};
-
+			
 			if (param.use_projector)
 			{
 				proj_W_r.row(indices[0]).noalias() += delta_W_r.row(0);
