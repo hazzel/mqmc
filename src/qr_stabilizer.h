@@ -143,6 +143,11 @@ class qr_stabilizer
 				proj_W_l = proj_U_l[n];
 				proj_W = (proj_W_l * proj_W_r).inverse();
 				
+				std::cout << "wl * wr" << std::endl;
+				std::cout << (proj_W_l * proj_W_r) << std::endl;
+				std::cout << "(wl * wr)^-1" << std::endl;
+				std::cout << (proj_W_l * proj_W_r).inverse() << std::endl;
+				
 				//std::cout << "start" << std::endl;
 				//std::cout << "equal_time_gf" << std::endl;
 				//equal_time_gf = id_N - proj_W_r * proj_W * proj_W_l;
@@ -233,11 +238,11 @@ class qr_stabilizer
 				equal_time_gf = id_N;
 				equal_time_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
 				
-				std::cout << "old gf" << std::endl;
-				std::cout << old_gf << std::endl;
-				std::cout << "equal_time_gf" << std::endl;
-				std::cout << equal_time_gf << std::endl;
-				std::cout << "---" << std::endl;
+				//std::cout << "old gf" << std::endl;
+				//std::cout << old_gf << std::endl;
+				//std::cout << "equal_time_gf" << std::endl;
+				//std::cout << equal_time_gf << std::endl;
+				//std::cout << "---" << std::endl;
 				
 				double ne = (old_gf - equal_time_gf).norm();
 				if (std::abs(ne) > std::pow(10., -6.))

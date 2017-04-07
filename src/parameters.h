@@ -4,7 +4,7 @@
 
 struct parameters
 {
-	double beta, dtau, t, tprime, V, mu, stag_mu, gamma, lambda;
+	double beta, dtau, t, tprime, V, W, mu, stag_mu, gamma, lambda, kappa;
 	int n_flavor, L, n_delta, n_tau_slices, n_discrete_tau, n_dyn_tau, direction, inv_symmetry;
 	std::string method, geometry, decoupling;
 	bool use_projector, multiply_T;

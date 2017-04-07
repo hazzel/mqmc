@@ -37,12 +37,14 @@ mc::mc(const std::string& dir)
 	config.param.t = pars.value_or_default<double>("t", 1.0);
 	config.param.tprime = pars.value_or_default<double>("tprime", 0.0);
 	config.param.V = pars.value_or_default<double>("V", 1.355);
+	config.param.W = pars.value_or_default<double>("W", 0.);
 	config.param.mu = pars.value_or_default<double>("mu", 0.);
 	config.param.stag_mu = pars.value_or_default<double>("stag_mu", 0.);
 	config.param.method = pars.value_or_default<std::string>("method", "finiteT");
 	config.param.use_projector = (config.param.method == "projective");
 	config.param.decoupling = pars.value_or_default<std::string>("decoupling", "majorana");
 	config.param.lambda = std::acosh(std::exp(config.param.V * config.param.dtau / 2.));
+	config.param.kappa = std::acosh(std::exp(config.param.W * config.param.dtau / 2.));
 	config.param.inv_symmetry = pars.value_or_default<int>("inv_symmetry", 1);
 	config.param.n_flavor = pars.value_or_default<int>("flavor", 1);
 
@@ -254,7 +256,7 @@ void mc::do_update()
 					}
 				}
 			}
-			qmc.trigger_event("flip all");
+			//qmc.trigger_event("flip all");
 			config.M.advance_backward();
 			config.M.stabilize_backward();
 			//if (n % 5 == 0)
@@ -273,7 +275,7 @@ void mc::do_update()
 		for (int n = 0; n < config.M.get_max_tau(); ++n)
 		{
 			config.M.advance_forward();
-			qmc.trigger_event("flip all");
+			//qmc.trigger_event("flip all");
 			config.M.stabilize_forward();
 
 			if (is_thermalized())
