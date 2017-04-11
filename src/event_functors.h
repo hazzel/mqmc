@@ -181,6 +181,8 @@ struct event_dynamic_measurement
 				add_wick(wick_kekule{config, rng});
 			else if (observables[i] == "epsilon")
 				add_wick(wick_epsilon{config, rng});
+			else if (observables[i] == "epsilon_as")
+				add_wick(wick_epsilon_as{config, rng});
 			else if (observables[i] == "chern")
 				add_wick(wick_chern{config, rng});
 			else if (observables[i] == "gamma_mod")

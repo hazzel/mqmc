@@ -143,10 +143,10 @@ class qr_stabilizer
 				proj_W_l = proj_U_l[n];
 				proj_W = (proj_W_l * proj_W_r).inverse();
 				
-				std::cout << "wl * wr" << std::endl;
-				std::cout << (proj_W_l * proj_W_r) << std::endl;
-				std::cout << "(wl * wr)^-1" << std::endl;
-				std::cout << (proj_W_l * proj_W_r).inverse() << std::endl;
+				//std::cout << "wl * wr" << std::endl;
+				//std::cout << (proj_W_l * proj_W_r) << std::endl;
+				//std::cout << "(wl * wr)^-1" << std::endl;
+				//std::cout << (proj_W_l * proj_W_r).inverse() << std::endl;
 				
 				//std::cout << "start" << std::endl;
 				//std::cout << "equal_time_gf" << std::endl;

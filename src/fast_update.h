@@ -232,9 +232,13 @@ class fast_update
 			std::vector<double> parity(n_matrix_size);
 			for (int i = 0; i < n_matrix_size; ++i)
 				parity[i] = std::real(S_f.col(i).dot(pm * S_f.col(i)));
+			P.resize(n_matrix_size, n_matrix_size / 2);
+			
 			for (int i = 0; i < n_matrix_size/2-1; ++i)
+			{
 				total_parity *= parity[i];
-			P = S_f.block(0, 0, n_matrix_size, n_matrix_size/2);
+				P.col(i) = S_f.col(i);
+			}
 			for (int i = n_matrix_size/2-1; i < n_matrix_size; ++i)
 			{
 				if (std::abs(param.inv_symmetry - total_parity*parity[i]) < epsilon)
@@ -244,7 +248,8 @@ class fast_update
 					break;
 				}
 			}
-				
+			
+			
 			//std::cout << "Total parity: " << total_parity << std::endl;
 			if (cnt != n_matrix_size)
 			{
@@ -403,15 +408,11 @@ class fast_update
 
 				for (auto& a : l.bonds("chern"))
 				{
-					double tp = 0.000001;
+					double tp = std::pow(10., -12.) * (2.*rng()-1.);
 					broken_H0(a.first+as, a.second+as) = {0., -tp};
 					broken_H0(a.second+as, a.first+as) = {0., tp};
-				}
-				for (auto& a : l.bonds("chern_2"))
-				{
-					double tp = 0.000001;
-					broken_H0(a.first+as, a.second+as) = {0., -tp};
-					broken_H0(a.second+as, a.first+as) = {0., tp};
+					broken_H0(l.inverted_site(a.first)+as, l.inverted_site(a.second)+as) = {0., -tp};
+					broken_H0(l.inverted_site(a.second)+as, l.inverted_site(a.first)+as) = {0., tp};
 				}
 			}
 		}
@@ -665,12 +666,14 @@ class fast_update
 						(n - 1) * param.n_delta);
 					stabilizer.set_proj_r(n, b);
 				}
+				/*
 				equal_time_gf = id - proj_W_r * proj_W * proj_W_l;
 				std::cout << "after rebuild" << std::endl;
 				std::cout << "proj_W" << std::endl;
 				std::cout << proj_W << std::endl;
 				std::cout << "etgf" << std::endl;
 				std::cout << equal_time_gf << std::endl;
+				*/
 			}
 			else
 			{

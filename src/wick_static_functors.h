@@ -184,11 +184,11 @@ struct wick_static_chern2
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		std::complex<double> chern2 = 0.;
+		std::complex<double> ch = 0.;
 		for (auto& a : config.l.bonds("chern"))
 			for (auto& b : config.l.bonds("chern"))
 			{
-				chern2 -= et_gf(a.second, a.first) * et_gf(b.second, b.first)
+				ch -= et_gf(a.second, a.first) * et_gf(b.second, b.first)
 					+ et_gf(b.second, a.first) * et_gf(b.first, a.second)
 					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
 					- et_gf(b.second, a.second) * et_gf(b.first, a.first)
@@ -197,7 +197,43 @@ struct wick_static_chern2
 					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
 					+ et_gf(b.first, a.second) * et_gf(b.second, a.first);
 			}
-		return std::real(chern2) / std::pow(config.l.n_bonds(), 2);
+		for (auto& a : config.l.bonds("chern_2"))
+			for (auto& b : config.l.bonds("chern"))
+			{
+				ch += et_gf(a.second, a.first) * et_gf(b.second, b.first)
+					- et_gf(b.second, a.first) * et_gf(b.first, a.second)
+					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
+					+ et_gf(b.second, a.second) * et_gf(b.first, a.first)
+					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
+					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
+					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
+					- et_gf(b.first, a.second) * et_gf(b.second, a.first);
+			}
+		for (auto& a : config.l.bonds("chern"))
+			for (auto& b : config.l.bonds("chern_2"))
+			{
+				ch += et_gf(a.second, a.first) * et_gf(b.second, b.first)
+					- et_gf(b.second, a.first) * et_gf(b.first, a.second)
+					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
+					+ et_gf(b.second, a.second) * et_gf(b.first, a.first)
+					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
+					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
+					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
+					- et_gf(b.first, a.second) * et_gf(b.second, a.first);
+			}
+		for (auto& a : config.l.bonds("chern_2"))
+			for (auto& b : config.l.bonds("chern_2"))
+			{
+				ch -= et_gf(a.second, a.first) * et_gf(b.second, b.first)
+					+ et_gf(b.second, a.first) * et_gf(b.first, a.second)
+					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
+					- et_gf(b.second, a.second) * et_gf(b.first, a.first)
+					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
+					- et_gf(b.first, a.first) * et_gf(b.second, a.second)
+					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
+					+ et_gf(b.first, a.second) * et_gf(b.second, a.first);
+			}
+		return std::real(ch) / std::pow(config.l.n_bonds(), 2);
 	}
 };
 
@@ -218,6 +254,60 @@ struct wick_static_S_chern_q
 		{
 			auto& r_i = config.l.real_space_coord(a.first);
 			for (auto& b : config.l.bonds("chern"))
+			{
+				auto& r_j = config.l.real_space_coord(b.first);
+				double qr = q.dot(r_i - r_j);
+				S -= (et_gf(a.second, a.first) * et_gf(b.second, b.first)
+					+ et_gf(b.second, a.first) * et_gf(b.first, a.second)
+					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
+					- et_gf(b.second, a.second) * et_gf(b.first, a.first)
+					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
+					- et_gf(b.first, a.first) * et_gf(b.second, a.second)
+					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
+					+ et_gf(b.first, a.second) * et_gf(b.second, a.first))
+					* (std::cos(qr) + im * std::sin(qr));
+			}
+		}
+		for (auto& a : config.l.bonds("chern_2"))
+		{
+			auto& r_i = config.l.real_space_coord(a.first);
+			for (auto& b : config.l.bonds("chern"))
+			{
+				auto& r_j = config.l.real_space_coord(b.first);
+				double qr = q.dot(r_i - r_j);
+				S += (et_gf(a.second, a.first) * et_gf(b.second, b.first)
+					- et_gf(b.second, a.first) * et_gf(b.first, a.second)
+					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
+					+ et_gf(b.second, a.second) * et_gf(b.first, a.first)
+					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
+					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
+					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
+					- et_gf(b.first, a.second) * et_gf(b.second, a.first))
+					* (std::cos(qr) + im * std::sin(qr));
+			}
+		}
+		for (auto& a : config.l.bonds("chern"))
+		{
+			auto& r_i = config.l.real_space_coord(a.first);
+			for (auto& b : config.l.bonds("chern_2"))
+			{
+				auto& r_j = config.l.real_space_coord(b.first);
+				double qr = q.dot(r_i - r_j);
+				S += (et_gf(a.second, a.first) * et_gf(b.second, b.first)
+					- et_gf(b.second, a.first) * et_gf(b.first, a.second)
+					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
+					+ et_gf(b.second, a.second) * et_gf(b.first, a.first)
+					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
+					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
+					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
+					- et_gf(b.first, a.second) * et_gf(b.second, a.first))
+					* (std::cos(qr) + im * std::sin(qr));
+			}
+		}
+		for (auto& a : config.l.bonds("chern_2"))
+		{
+			auto& r_i = config.l.real_space_coord(a.first);
+			for (auto& b : config.l.bonds("chern_2"))
 			{
 				auto& r_j = config.l.real_space_coord(b.first);
 				double qr = q.dot(r_i - r_j);
@@ -640,7 +730,7 @@ struct wick_static_kek
 		std::array<const std::vector<std::pair<int, int>>*, 3> kek_bonds =
 			{&config.l.bonds("kekule"), &config.l.bonds("kekule_2"),
 			&config.l.bonds("kekule_3")};
-		std::array<double, 3> factors = {2., -1., -1.};
+		std::array<double, 3> factors = {-1., -1., 2.};
 		if (config.param.decoupling == "majorana")
 		{
 			for (int i = 0; i < kek_bonds.size(); ++i)
