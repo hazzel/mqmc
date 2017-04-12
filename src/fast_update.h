@@ -159,7 +159,7 @@ class fast_update
 				else
 					build_broken_dirac_H0(broken_H0);
 
-				if (param.L % 3 == 0 && param.decoupling == "dirac")
+				if (param.decoupling == "dirac")
 					symmetrize_EV(broken_H0);
 				else
 				{

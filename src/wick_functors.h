@@ -210,6 +210,71 @@ struct wick_epsilon_as
 	}
 };
 
+struct wick_cdw_s
+{
+	configuration& config;
+	Random& rng;
+
+	wick_cdw_s(configuration& config_, Random& rng_)
+		: config(config_), rng(rng_)
+	{}
+	
+	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
+		const matrix_t& td_gf)
+	{
+		std::complex<double> ch = 0.;
+		for (auto& a : config.l.bonds("chern"))
+			for (auto& b : config.l.bonds("chern"))
+			{
+				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					+ td_gf(b.second, a.first) * td_gf(b.first, a.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					+ td_gf(b.second, a.second) * td_gf(b.first, a.first)
+					+ et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					+ td_gf(b.first, a.first) * td_gf(b.second, a.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
+					+ td_gf(b.first, a.second) * td_gf(b.second, a.first);
+			}
+		for (auto& a : config.l.bonds("chern_2"))
+			for (auto& b : config.l.bonds("chern"))
+			{
+				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					- td_gf(b.second, a.first) * td_gf(b.first, a.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					- td_gf(b.second, a.second) * td_gf(b.first, a.first)
+					+ et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					- td_gf(b.first, a.first) * td_gf(b.second, a.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
+					- td_gf(b.first, a.second) * td_gf(b.second, a.first);
+			}
+		for (auto& a : config.l.bonds("chern"))
+			for (auto& b : config.l.bonds("chern_2"))
+			{
+				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					- td_gf(b.second, a.first) * td_gf(b.first, a.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					- td_gf(b.second, a.second) * td_gf(b.first, a.first)
+					+ et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					- td_gf(b.first, a.first) * td_gf(b.second, a.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
+					- td_gf(b.first, a.second) * td_gf(b.second, a.first);
+			}
+		for (auto& a : config.l.bonds("chern_2"))
+			for (auto& b : config.l.bonds("chern_2"))
+			{
+				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					+ td_gf(b.second, a.first) * td_gf(b.first, a.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					+ td_gf(b.second, a.second) * td_gf(b.first, a.first)
+					+ et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					+ td_gf(b.first, a.first) * td_gf(b.second, a.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
+					+ td_gf(b.first, a.second) * td_gf(b.second, a.first);
+			}
+		return std::real(ch) / std::pow(config.l.n_bonds(), 2.);
+	}
+};
+
 // chern(tau) = sum_{chern} <c_i^dag(tau) c_j(tau) c_n^dag c_m>
 struct wick_chern
 {

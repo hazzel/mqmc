@@ -121,7 +121,7 @@ void mc::random_read(idump& d)
 void mc::init()
 {
 	//Set up measurements
-	n_prebin *= 5;
+	n_prebin *= config.param.n_tau_slices / 8 / n_static_cycles;
 	config.measure.add_observable("norm_error", n_prebin);
 	if (config.param.mu != 0 || config.param.stag_mu != 0)
 	{
@@ -146,7 +146,7 @@ void mc::init()
 	config.measure.add_observable("chern4", n_prebin);
 	config.measure.add_vectorobservable("corr", config.l.max_distance() + 1,
 		n_prebin);
-	n_prebin /= 5;
+	n_prebin /= config.param.n_tau_slices / 8 / n_static_cycles;
 
 	if (config.param.n_discrete_tau > 0)
 		for (int i = 0; i < config.param.obs.size(); ++i)
@@ -174,7 +174,7 @@ void mc::write(const std::string& dir)
 	{
 		f << "Thermalization: Done." << std::endl
 			<< "Sweeps: " << (sweep - n_warmup) << std::endl
-			<< "Static bins: " << static_cast<int>(static_bin_cnt / n_prebin)
+			<< "Static bins: " << static_cast<int>(static_bin_cnt / n_prebin / (config.param.n_tau_slices / 8 / n_static_cycles))
 			<< std::endl
 			<< "Dynamic bins: " << static_cast<int>(dyn_bin_cnt / n_prebin)
 			<< std::endl;
@@ -261,7 +261,7 @@ void mc::do_update()
 					}
 				}
 			}
-			//qmc.trigger_event("flip all");
+			qmc.trigger_event("flip all");
 			config.M.advance_backward();
 			config.M.stabilize_backward();
 			//if (n % 5 == 0)
@@ -280,7 +280,7 @@ void mc::do_update()
 		for (int n = 0; n < config.M.get_max_tau(); ++n)
 		{
 			config.M.advance_forward();
-			//qmc.trigger_event("flip all");
+			qmc.trigger_event("flip all");
 			config.M.stabilize_forward();
 
 			if (is_thermalized())
