@@ -180,7 +180,7 @@ class fast_update
 			dmatrix_t pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			for (int i = 0; i < n_matrix_size; ++i)
 				pm(i, l.inverted_site(i)) = 1.;
-			double epsilon = std::pow(10., -5.);
+			double epsilon = std::pow(10., -4.);
 
 			dmatrix_t S_s = S + pm * S;
 			dmatrix_t S_a = S - pm * S;
