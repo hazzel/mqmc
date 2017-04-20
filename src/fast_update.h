@@ -408,7 +408,7 @@ class fast_update
 
 				for (auto& a : l.bonds("chern"))
 				{
-					double tp = std::pow(10., -12.) * (2.*rng()-1.);
+					double tp = std::pow(10., -10.) * (2.*rng()-1.);
 					broken_H0(a.first+as, a.second+as) = {0., -tp};
 					broken_H0(a.second+as, a.first+as) = {0., tp};
 					broken_H0(l.inverted_site(a.first)+as, l.inverted_site(a.second)+as) = {0., -tp};
