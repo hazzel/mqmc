@@ -172,7 +172,7 @@ struct event_dynamic_measurement
 		obs.reserve(10);
 		for (int i = 0; i < observables.size(); ++i)
 		{
-			dyn_tau.push_back(std::vector<double>(config.param.n_discrete_tau+1,
+			dyn_tau.push_back(std::vector<double>(2*config.param.n_discrete_tau+1,
 				0.));
 
 			if (observables[i] == "M2")
