@@ -1216,7 +1216,6 @@ class fast_update
 				else
 					direction = 1;
 				
-				/*
 				if (direction == 1)
 				{
 					for (int n = 0; n < 2*param.n_discrete_tau; ++n)
@@ -1224,9 +1223,8 @@ class fast_update
 						advance_forward();
 						stabilize_forward();
 					}
-					direction == -1;
+					direction = -1;
 				}
-				*/
 
 				for (int n = 0; n < param.n_discrete_tau; ++n)
 				{

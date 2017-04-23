@@ -37,11 +37,13 @@ struct wick_M2
 			for (int i = 0; i < config.l.n_sites(); ++i)
 				for (int j = 0; j < config.l.n_sites(); ++j)
 				{
-					double delta_ij = i == j ? 1. : 0.;
+                    /*
 					M2 += config.l.parity(i) * config.l.parity(j)
 						* std::real((1. - et_gf_t(i, i)) * (1. - et_gf_0(j, j))
 						+ config.l.parity(i) * config.l.parity(j) * td_gf(i, j) * td_gf(i, j)
 						- (et_gf_t(i, i) + et_gf_0(j, j))/2. + 1./4.);
+                    */
+                    M2 += std::real(td_gf(j, i) * td_gf(j, i));
 				}
 		}
 		return std::real(M2) / std::pow(config.l.n_sites(), 2.);
