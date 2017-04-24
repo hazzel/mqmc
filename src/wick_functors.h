@@ -93,7 +93,7 @@ struct wick_kekule
 						{
 							auto& a = (*kek_bonds[i])[j];
 							auto& b = (*kek_bonds[m])[n];
-
+							
 							kek += factors[i] * factors[m]
 								* (et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
 								+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(b.first, a.first) * td_gf(b.second, a.second));

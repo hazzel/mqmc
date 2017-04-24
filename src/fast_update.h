@@ -1211,20 +1211,27 @@ class fast_update
 				std::vector<dmatrix_t> et_gf_T(2*param.n_discrete_tau);
 				time_displaced_gf = id;
 				int direction;
-				if (tau > max_tau/2)
+				/*
+				if (tau >= max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
 					direction = -1;
 				else
 					direction = 1;
 				
-				if (direction == 1)
+				while (tau != max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
 				{
-					for (int n = 0; n < 2*param.n_discrete_tau; ++n)
+					if (direction == -1)
+					{
+						advance_backward();
+						stabilize_backward();
+					}
+					else
 					{
 						advance_forward();
 						stabilize_forward();
 					}
-					direction = -1;
 				}
+				*/
+				direction = -1;
 
 				for (int n = 0; n < param.n_discrete_tau; ++n)
 				{
