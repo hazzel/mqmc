@@ -759,7 +759,7 @@ struct wick_static_kek
 							
 							kek += factors[i] * factors[m]
 									* (et_gf(a.second, a.first) * et_gf(b.first, b.second)
-									+ config.l.parity(a.first) * config.l.parity(b.first) * et_gf(b.first, a.first)) * et_gf(b.second, a.second);
+									+ config.l.parity(a.first) * config.l.parity(b.first) * et_gf(a.first, b.first) * et_gf(a.second, b.second));
 						}
 		}
 		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);

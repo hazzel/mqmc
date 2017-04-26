@@ -408,7 +408,8 @@ class fast_update
 
 				for (auto& a : l.bonds("chern"))
 				{
-					double tp = std::pow(10., -10.) * (2.*rng()-1.);
+					//double tp = std::pow(10., -9.) * (2.*rng()-1.);
+					double tp = std::pow(10., -8.);
 					broken_H0(a.first+as, a.second+as) = {0., -tp};
 					broken_H0(a.second+as, a.first+as) = {0., tp};
 					broken_H0(l.inverted_site(a.first)+as, l.inverted_site(a.second)+as) = {0., -tp};
@@ -1211,7 +1212,6 @@ class fast_update
 				std::vector<dmatrix_t> et_gf_T(2*param.n_discrete_tau);
 				time_displaced_gf = id;
 				int direction;
-				/*
 				if (tau >= max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
 					direction = -1;
 				else
@@ -1230,7 +1230,6 @@ class fast_update
 						stabilize_forward();
 					}
 				}
-				*/
 				direction = -1;
 
 				for (int n = 0; n < param.n_discrete_tau; ++n)
