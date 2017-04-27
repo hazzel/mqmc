@@ -1208,8 +1208,8 @@ class fast_update
 				buffer_equal_time_gf();
 				stabilizer.set_buffer();
 				std::vector<dmatrix_t> et_gf_L(param.n_discrete_tau);
-				std::vector<dmatrix_t> et_gf_R(param.n_discrete_tau);
-				std::vector<dmatrix_t> et_gf_T(2*param.n_discrete_tau);
+				std::vector<dmatrix_t> et_gf_R(2*param.n_discrete_tau);
+				std::vector<dmatrix_t> td_gf(2*param.n_discrete_tau);
 				time_displaced_gf = id;
 				int direction;
 				if (tau >= max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
@@ -1249,10 +1249,9 @@ class fast_update
 					}
 					et_gf_L[n] = id;
 					et_gf_L[n].noalias() -= proj_W_r * proj_W * proj_W_l;
+					td_gf[n] = et_gf_L[n];
 				}
-				dmatrix_t et_gf_0 = id;
-				et_gf_0.noalias() -= proj_W_r * proj_W * proj_W_l;
-				//dmatrix_t et_gf_0 = equal_time_gf;
+				dmatrix_t& et_gf_0 = et_gf_L[param.n_discrete_tau - 1];
 				for (int n = 0; n < 2*param.n_discrete_tau; ++n)
 				{
 					for (int m = 0; m < param.n_dyn_tau; ++m)
@@ -1268,15 +1267,37 @@ class fast_update
 							stabilize_forward();
 						}
 					}
-					equal_time_gf = id;
-					equal_time_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
+					et_gf_R[n] = id;
+					et_gf_R[n].noalias() -= proj_W_r * proj_W * proj_W_l;
 					if (n < param.n_discrete_tau)
-						et_gf_R[n] = equal_time_gf;
-					et_gf_T[n] = equal_time_gf;
+						td_gf[n+param.n_discrete_tau] = et_gf_R[n];
 				}
 
 				for (int i = 0; i < dyn_tau.size(); ++i)
 					dyn_tau[i][0] = obs[i].get_obs(et_gf_0, et_gf_0, et_gf_0);
+				
+				//n = 1
+				for (int m = 0; m < 2*param.n_discrete_tau; ++m)
+				{
+					int tl = max_tau/2 + param.n_discrete_tau * param.n_dyn_tau;
+					dmatrix_t p = propagator(tl - m*param.n_dyn_tau, tl - (m+1)*param.n_dyn_tau);
+					td_gf[m] = p * td_gf[m];
+					
+					for (int i = 0; i < dyn_tau.size(); ++i)
+						dyn_tau[i][n] += obs[i].get_obs(et_gf_0, et_gf_R[n-1], td_gf[m]) / 2.*param.n_discrete_tau;
+				}
+				//n > 1
+				for (int n = 2; n < 2*param.n_discrete_tau; ++n)
+					for (int m = 0; m < 2*param.n_discrete_tau; ++m)
+				{
+					td_gf[n] = td_gf[n] * td_gf[n];
+					
+					for (int i = 0; i < dyn_tau.size(); ++i)
+						dyn_tau[i][n] += obs[i].get_obs(et_gf_0, et_gf_R[n-1], td_gf[m]) / (2.*param.n_discrete_tau - n + 1);
+				}
+				
+				
+				/*
 				for (int n = 1; n <= param.n_discrete_tau; ++n)
 				{
 					dmatrix_t g_l, g_r;
@@ -1297,13 +1318,14 @@ class fast_update
 					
 					time_displaced_gf = g_l * time_displaced_gf;
 					for (int i = 0; i < dyn_tau.size(); ++i)
-						dyn_tau[i][2*n-1] = obs[i].get_obs(et_gf_0, et_gf_T[2*n-2],
+						dyn_tau[i][2*n-1] = obs[i].get_obs(et_gf_0, et_gf_R[2*n-2],
 							time_displaced_gf);
 					time_displaced_gf = time_displaced_gf * g_r;
 					for (int i = 0; i < dyn_tau.size(); ++i)
-						dyn_tau[i][2*n] = obs[i].get_obs(et_gf_0, et_gf_T[2*n-1],
+						dyn_tau[i][2*n] = obs[i].get_obs(et_gf_0, et_gf_R[2*n-1],
 							time_displaced_gf);
 				}
+				*/
 
 				reset_equal_time_gf_to_buffer();
 				stabilizer.restore_buffer();
