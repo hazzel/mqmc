@@ -1209,6 +1209,7 @@ class fast_update
 				stabilizer.set_buffer();
 				std::vector<dmatrix_t> et_gf_L(param.n_discrete_tau);
 				std::vector<dmatrix_t> et_gf_R(2*param.n_discrete_tau);
+				std::vector<dmatrix_t> n1_td_gf(2*param.n_discrete_tau);
 				std::vector<dmatrix_t> td_gf(2*param.n_discrete_tau);
 				time_displaced_gf = id;
 				int direction;
@@ -1273,31 +1274,41 @@ class fast_update
 						td_gf[n+param.n_discrete_tau] = et_gf_R[n];
 				}
 
-				for (int i = 0; i < dyn_tau.size(); ++i)
-					dyn_tau[i][0] = obs[i].get_obs(et_gf_0, et_gf_0, et_gf_0);
 				
+				//n = 0
+				for (int m = 0; m < param.n_discrete_tau; ++m)
+				{
+					for (int i = 0; i < dyn_tau.size(); ++i)
+					{
+						dyn_tau[i][0] += obs[i].get_obs(et_gf_L[m], et_gf_L[m], et_gf_L[m]) / (2.*param.n_discrete_tau);
+						dyn_tau[i][0] += obs[i].get_obs(et_gf_R[m], et_gf_R[m], et_gf_R[m]) / (2.*param.n_discrete_tau);
+					}
+				}
 				//n = 1
 				for (int m = 0; m < 2*param.n_discrete_tau; ++m)
 				{
 					int tl = max_tau/2 + param.n_discrete_tau * param.n_dyn_tau;
 					dmatrix_t p = propagator(tl - m*param.n_dyn_tau, tl - (m+1)*param.n_dyn_tau);
 					td_gf[m] = p * td_gf[m];
+					n1_td_gf[m] = td_gf[m];
 					
 					for (int i = 0; i < dyn_tau.size(); ++i)
-						dyn_tau[i][n] += obs[i].get_obs(et_gf_0, et_gf_R[n-1], td_gf[m]) / 2.*param.n_discrete_tau;
+						dyn_tau[i][1] += obs[i].get_obs(et_gf_0, et_gf_R[0], td_gf[m]) / (2.*param.n_discrete_tau);
 				}
 				//n > 1
 				for (int n = 2; n < 2*param.n_discrete_tau; ++n)
-					for (int m = 0; m < 2*param.n_discrete_tau; ++m)
-				{
-					td_gf[n] = td_gf[n] * td_gf[n];
-					
-					for (int i = 0; i < dyn_tau.size(); ++i)
-						dyn_tau[i][n] += obs[i].get_obs(et_gf_0, et_gf_R[n-1], td_gf[m]) / (2.*param.n_discrete_tau - n + 1);
-				}
+					for (int m = n - 1; m < 2*param.n_discrete_tau; ++m)
+					{
+						td_gf[m] = n1_td_gf[m-n+1] * td_gf[m];
+						
+						for (int i = 0; i < dyn_tau.size(); ++i)
+							dyn_tau[i][n] += obs[i].get_obs(et_gf_0, et_gf_R[n-1], td_gf[m]) / (2.*param.n_discrete_tau - n + 1);
+					}
 				
 				
 				/*
+				for (int i = 0; i < dyn_tau.size(); ++i)
+					dyn_tau[i][0] = obs[i].get_obs(et_gf_0, et_gf_0, et_gf_0);
 				for (int n = 1; n <= param.n_discrete_tau; ++n)
 				{
 					dmatrix_t g_l, g_r;
