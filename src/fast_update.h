@@ -1274,7 +1274,7 @@ class fast_update
 						td_gf[n+param.n_discrete_tau] = et_gf_R[n];
 				}
 
-				
+				/*
 				//n = 0
 				for (int m = 0; m < param.n_discrete_tau; ++m)
 				{
@@ -1304,9 +1304,10 @@ class fast_update
 						for (int i = 0; i < dyn_tau.size(); ++i)
 							dyn_tau[i][n] += obs[i].get_obs(et_gf_0, et_gf_R[n-1], td_gf[m]) / (2.*param.n_discrete_tau - n + 1);
 					}
+				*/
 				
 				
-				/*
+				
 				for (int i = 0; i < dyn_tau.size(); ++i)
 					dyn_tau[i][0] = obs[i].get_obs(et_gf_0, et_gf_0, et_gf_0);
 				for (int n = 1; n <= param.n_discrete_tau; ++n)
@@ -1336,7 +1337,7 @@ class fast_update
 						dyn_tau[i][2*n] = obs[i].get_obs(et_gf_0, et_gf_R[2*n-1],
 							time_displaced_gf);
 				}
-				*/
+				
 
 				reset_equal_time_gf_to_buffer();
 				stabilizer.restore_buffer();
