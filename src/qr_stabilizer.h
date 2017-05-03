@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <Eigen/Dense>
+#include <Eigen/LU>
 #include <Eigen/QR>
 #include <Eigen/SVD>
 #include "measurements.h"
@@ -118,6 +119,7 @@ class qr_stabilizer
 		
 		void set_proj_l(int n, const dmatrix_t& b)
 		{
+			/*
 			if (n == n_intervals)
 				qr_solver.compute(Pt);
 			else
@@ -126,6 +128,15 @@ class qr_stabilizer
 			proj_U_l[n] = r * qr_solver.colsPermutation().transpose();
 			for (int i = 0; i < proj_U_l[n].rows(); ++i)
 				proj_U_l[n].row(i) = 1./qr_solver.matrixQR()(i, i) * proj_U_l[n].row(i);
+			*/
+			
+			
+			if (n == n_intervals)
+				qr_solver.compute(Pt.adjoint());
+			else
+				qr_solver.compute(b.adjoint() * proj_U_l[n+1].adjoint());
+			dmatrix_t p_q = dmatrix_t::Identity(Pt.rows(), Pt.cols());
+			proj_U_l[n] = p_q * qr_solver.matrixQ().adjoint();
 		}
 		
 		void set_proj_r(int n, const dmatrix_t& b)
@@ -143,17 +154,20 @@ class qr_stabilizer
 				proj_W_l = proj_U_l[n];
 				proj_W = (proj_W_l * proj_W_r).inverse();
 				
-				//std::cout << "wl * wr" << std::endl;
-				//std::cout << (proj_W_l * proj_W_r) << std::endl;
-				//std::cout << "(wl * wr)^-1" << std::endl;
-				//std::cout << (proj_W_l * proj_W_r).inverse() << std::endl;
+				Eigen::JacobiSVD<dmatrix_t> svd(proj_W_l * proj_W_r, Eigen::ComputeThinU | Eigen::ComputeThinV);
+				double x = svd.singularValues().maxCoeff() / svd.singularValues().minCoeff();
+				measure.add("condition_number", x);
 				
-				//std::cout << "start" << std::endl;
-				//std::cout << "equal_time_gf" << std::endl;
-				//equal_time_gf = id_N - proj_W_r * proj_W * proj_W_l;
-				//std::cout << equal_time_gf << std::endl;
-				//std::cout << "---" << std::endl;
+				/*
+				double y = (proj_U_r[n].adjoint() * proj_U_r[n] - p_q.adjoint() * id_N * p_q).norm();
+				if (y > std::pow(10., -8.))
+					std::cout << y << std::endl;
+				y = (proj_U_l[n] * proj_U_l[n].adjoint() - p_q.adjoint() * id_N * p_q).norm();
+				if (y > std::pow(10., -8.))
+					std::cout << y << std::endl;
 				
+				std::cout << proj_U_l[n] * proj_U_l[n].adjoint() << std::endl;
+				*/
 				init = true;
 			}
 		}
@@ -174,6 +188,10 @@ class qr_stabilizer
 				proj_W = (proj_W_l * proj_W_r).inverse();
 				equal_time_gf = id_N;
 				equal_time_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
+				
+				Eigen::JacobiSVD<dmatrix_t> svd(proj_W_l * proj_W_r, Eigen::ComputeThinU | Eigen::ComputeThinV);
+				double x = svd.singularValues().maxCoeff() / svd.singularValues().minCoeff();
+				measure.add("condition_number", x);
 				
 				double ne = (old_gf - equal_time_gf).norm();
 				if (std::abs(ne) > std::pow(10., -6.))
@@ -224,11 +242,19 @@ class qr_stabilizer
 		{
 			if (use_projector)
 			{
+				/*
 				qr_solver.compute(proj_U_l[n] * b);
 				dmatrix_t r = qr_solver.matrixQR().triangularView<Eigen::Upper>();
 				proj_U_l[n-1] = r * qr_solver.colsPermutation().transpose();
 				for (int i = 0; i < proj_U_l[n-1].rows(); ++i)
 					proj_U_l[n-1].row(i) = 1./qr_solver.matrixQR()(i, i) * proj_U_l[n-1].row(i);
+				*/
+				
+				
+				qr_solver.compute(b.adjoint() * proj_U_l[n].adjoint());
+				dmatrix_t p_q = dmatrix_t::Identity(Pt.rows(), Pt.cols());
+				proj_U_l[n-1] = p_q * qr_solver.matrixQ().adjoint();
+				
 					
 				dmatrix_t old_gf = id_N;
 				old_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
@@ -238,11 +264,9 @@ class qr_stabilizer
 				equal_time_gf = id_N;
 				equal_time_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
 				
-				//std::cout << "old gf" << std::endl;
-				//std::cout << old_gf << std::endl;
-				//std::cout << "equal_time_gf" << std::endl;
-				//std::cout << equal_time_gf << std::endl;
-				//std::cout << "---" << std::endl;
+				Eigen::JacobiSVD<dmatrix_t> svd(proj_W_l * proj_W_r, Eigen::ComputeThinU | Eigen::ComputeThinV);
+				double x = svd.singularValues().maxCoeff() / svd.singularValues().minCoeff();
+				measure.add("condition_number", x);
 				
 				double ne = (old_gf - equal_time_gf).norm();
 				if (std::abs(ne) > std::pow(10., -6.))
@@ -414,6 +438,7 @@ class qr_stabilizer
 		dmatrix_t Pt;
 		Eigen::ColPivHouseholderQR<dmatrix_t> qr_solver;
 		Eigen::JacobiSVD<dmatrix_t> svd_solver;
+		Eigen::FullPivLU<dmatrix_t> lu_solver;
 		double norm_error = 0.;
 		int n_error = 0;
 		bool init = false;

@@ -101,21 +101,21 @@ struct arg_t
 	}
 
 private:
-	int set_bit(int integer, int offset) const
+	int set_bit(int integer, int digit) const
 	{
-		return integer | (1 << offset);
+		return integer | (1 << digit);
 	}
-	int clear_bit(int integer, int offset) const
+	int clear_bit(int integer, int digit) const
 	{
-		return integer & (~(1 << offset));
+		return integer & (~(1 << digit));
 	}
-	int invert_bit(int integer, int offset) const
+	int invert_bit(int integer, int digit) const
 	{
-		return integer ^ (1 << offset);
+		return integer ^ (1 << digit);
 	}
-	int test_bit(int integer, int offset) const
+	int test_bit(int integer, int digit) const
 	{
-		return (integer & (1 << offset)) >> offset;
+		return (integer & (1 << digit)) >> digit;
 	}
 };
 

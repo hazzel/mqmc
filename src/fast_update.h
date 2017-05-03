@@ -231,7 +231,10 @@ class fast_update
 			double total_parity = 1;
 			std::vector<double> parity(n_matrix_size);
 			for (int i = 0; i < n_matrix_size; ++i)
+			{
 				parity[i] = std::real(S_f.col(i).dot(pm * S_f.col(i)));
+				//std::cout << i << ": e = " << en[i] << ", P = " << parity[i] << std::endl;
+			}
 			P.resize(n_matrix_size, n_matrix_size / 2);
 			
 			for (int i = 0; i < n_matrix_size/2-1; ++i)
@@ -249,6 +252,40 @@ class fast_update
 				}
 			}
 			
+			/*
+			int c = 0;
+			for (int i = 1; i < n_matrix_size/2-2; ++i)
+			{
+				total_parity *= parity[i];
+				P.col(c) = S_f.col(i);
+				//std::cout << "taken: " << i << std::endl;
+				++c;
+			}
+			for (int i = n_matrix_size/2-2; i < n_matrix_size/2+2; ++i)
+			{
+				if (std::abs(parity[i] - 1.) < epsilon)
+				{
+					total_parity *= parity[i];
+					P.col(c) = S_f.col(i);
+					//std::cout << "0 taken: " << i << std::endl;
+					++c;
+				}
+			}
+			if (std::abs(param.inv_symmetry - parity[0]*total_parity) < epsilon)
+			{
+					total_parity *= parity[0];
+					P.col(c) = S_f.col(0);
+					//std::cout << "last taken: " << 0 << std::endl;
+					++c;
+			}
+			else if (std::abs(param.inv_symmetry - parity[n_matrix_size-1]*total_parity) < epsilon)
+			{
+					total_parity *= parity[n_matrix_size-1];
+					P.col(c) = S_f.col(n_matrix_size-1);
+					//std::cout << "last taken: " << n_matrix_size-1 << std::endl;
+					++c;
+			}
+			*/
 			
 			//std::cout << "Total parity: " << total_parity << std::endl;
 			if (cnt != n_matrix_size)
@@ -261,6 +298,13 @@ class fast_update
 				std::cout << "Error! Wrong parity of trial wave function." << std::endl;
 				throw(std::runtime_error("Wrong parity in trial wave function."));
 			}
+			/*
+			if (c != n_matrix_size/2)
+			{
+				std::cout << "Error! Wrong number of states in trial wave function." << std::endl;
+				throw(std::runtime_error("Error in symmetrization. Wrong number of states."));
+			}
+			*/
 		}
 
 		void build_majorana_H0(dmatrix_t& H0)
@@ -406,6 +450,7 @@ class fast_update
 				for (int i = 0; i < l.n_sites(); ++i)
 					broken_H0(i+as, i+as) = l.parity(i) * param.stag_mu + param.mu;
 
+				/*
 				for (auto& a : l.bonds("chern"))
 				{
 					//double tp = std::pow(10., -9.) * (2.*rng()-1.);
@@ -415,6 +460,7 @@ class fast_update
 					broken_H0(l.inverted_site(a.first)+as, l.inverted_site(a.second)+as) = {0., -tp};
 					broken_H0(l.inverted_site(a.second)+as, l.inverted_site(a.first)+as) = {0., tp};
 				}
+				*/
 			}
 		}
 

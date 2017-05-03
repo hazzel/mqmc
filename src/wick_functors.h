@@ -228,7 +228,7 @@ struct wick_cdw_s
 		for (auto& a : config.l.bonds("chern"))
 			for (auto& b : config.l.bonds("chern"))
 			{
-				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
 					+ et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					+ td_gf(a.second, b.second) * td_gf(a.first, b.first)
@@ -240,7 +240,7 @@ struct wick_cdw_s
 		for (auto& a : config.l.bonds("chern_2"))
 			for (auto& b : config.l.bonds("chern"))
 			{
-				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
 					+ et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					- td_gf(a.second, b.second) * td_gf(a.first, b.first)
@@ -252,7 +252,7 @@ struct wick_cdw_s
 		for (auto& a : config.l.bonds("chern"))
 			for (auto& b : config.l.bonds("chern_2"))
 			{
-				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
 					+ et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					- td_gf(a.second, b.second) * td_gf(a.first, b.first)
@@ -264,7 +264,7 @@ struct wick_cdw_s
 		for (auto& a : config.l.bonds("chern_2"))
 			for (auto& b : config.l.bonds("chern_2"))
 			{
-				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
 					+ et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					+ td_gf(a.second, b.second) * td_gf(a.first, b.first)

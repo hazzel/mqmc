@@ -123,6 +123,7 @@ void mc::init()
 	//Set up measurements
 	n_prebin *= config.param.n_tau_slices / 8 / n_static_cycles;
 	config.measure.add_observable("norm_error", n_prebin);
+	config.measure.add_observable("condition_number", n_prebin);
 	if (config.param.mu != 0 || config.param.stag_mu != 0)
 	{
 		config.measure.add_observable("n_re", n_prebin*100);
