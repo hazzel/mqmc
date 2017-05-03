@@ -12,6 +12,7 @@
 #include "configuration.h"
 
 typedef fast_update<arg_t>::dmatrix_t matrix_t;
+typedef fast_update<arg_t>::numeric_t numeric_t;
 
 struct wick_static_energy
 {
@@ -24,36 +25,17 @@ struct wick_static_energy
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		double energy = 0.;
-		if (config.param.decoupling == "majorana")
-		{
-			for (auto& a : config.l.bonds("nearest neighbors"))
-				energy += -config.l.parity(a.first) * config.param.t * std::imag(et_gf(a.second, a.first));
-			for (auto& a : config.l.bonds("nearest neighbors"))
-				energy += config.param.V * std::real((1. - et_gf(a.first, a.first)) * (1. - et_gf(a.second, a.second))
-					- et_gf(a.second, a.first) * et_gf(a.first, a.second) - (et_gf(a.first, a.first) + et_gf(a.second, a.second))/2. + 1./4.)/2.;
-			for (auto& a : config.l.bonds("d3_bonds"))
-				energy += -config.l.parity(a.first) * config.param.tprime
-					* std::imag(et_gf(a.second, a.first));
-			for (int i = 0; i < config.l.n_sites(); ++i)
-				energy += -config.l.parity(i) * config.param.stag_mu
-					* std::real(et_gf(i, i));
-		}
-		else
-		{
-			for (auto& a : config.l.bonds("nearest neighbors"))
-				energy += config.param.t * std::real(et_gf(a.second, a.first));
-			for (auto& a : config.l.bonds("nearest neighbors"))
-				energy += config.param.V * std::real((1. - et_gf(a.first, a.first)) * (1. - et_gf(a.second, a.second))
-					- et_gf(a.second, a.first) * et_gf(a.first, a.second) - (et_gf(a.first, a.first) + et_gf(a.second, a.second))/2. + 1./4.)/2.;
-			for (auto& a : config.l.bonds("d3_bonds"))
-				energy += config.param.tprime
-					* std::real(et_gf(a.second, a.first));
-			for (int i = 0; i < config.l.n_sites(); ++i)
-				energy += -config.l.parity(i) * config.param.stag_mu
-					* std::real(et_gf(i, i));
-		}
-		return energy;
+		numeric_t energy = 0.;
+		for (auto& a : config.l.bonds("nearest neighbors"))
+			energy += config.param.t * et_gf(a.second, a.first);
+		for (auto& a : config.l.bonds("nearest neighbors"))
+			energy += config.param.V * ((1. - et_gf(a.first, a.first)) * (1. - et_gf(a.second, a.second))
+				- et_gf(a.second, a.first) * et_gf(a.first, a.second) - (et_gf(a.first, a.first) + et_gf(a.second, a.second))/2. + 1./4.)/2.;
+		for (auto& a : config.l.bonds("d3_bonds"))
+			energy += config.param.tprime * et_gf(a.second, a.first);
+		for (int i = 0; i < config.l.n_sites(); ++i)
+			energy += -config.l.parity(i) * config.param.stag_mu * et_gf(i, i);
+		return std::real(energy);
 	}
 };
 
@@ -68,24 +50,12 @@ struct wick_static_h_t
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		double energy = 0.;
-		if (config.param.decoupling == "majorana")
-		{
-			for (auto& a : config.l.bonds("nearest neighbors"))
-				energy += -config.l.parity(a.first) * config.param.t * std::imag(et_gf(a.second, a.first));
-			for (auto& a : config.l.bonds("d3_bonds"))
-				energy += -config.l.parity(a.first) * config.param.tprime
-					* std::imag(et_gf(a.second, a.first));
-		}
-		else
-		{
-			for (auto& a : config.l.bonds("nearest neighbors"))
-				energy += config.param.t * std::real(et_gf(a.second, a.first));
-			for (auto& a : config.l.bonds("d3_bonds"))
-				energy += config.param.tprime
-					* std::real(et_gf(a.second, a.first));
-		}
-		return energy;
+		numeric_t energy = 0.;
+		for (auto& a : config.l.bonds("nearest neighbors"))
+			energy += config.param.t * et_gf(a.second, a.first);
+		for (auto& a : config.l.bonds("d3_bonds"))
+			energy += config.param.tprime * et_gf(a.second, a.first);
+		return std::real(energy);
 	}
 };
 
@@ -100,11 +70,11 @@ struct wick_static_h_v
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		double energy = 0.;
+		numeric_t energy = 0.;
 		for (auto& a : config.l.bonds("nearest neighbors"))
-			energy += config.param.V * std::real((1. - et_gf(a.first, a.first)) * (1. - et_gf(a.second, a.second))
+			energy += config.param.V * ((1. - et_gf(a.first, a.first)) * (1. - et_gf(a.second, a.second))
 				- et_gf(a.second, a.first) * et_gf(a.first, a.second) - (et_gf(a.first, a.first) + et_gf(a.second, a.second))/2. + 1./4.)/2.;
-		return energy;
+		return std::real(energy);
 	}
 };
 
@@ -119,11 +89,10 @@ struct wick_static_h_mu
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		double energy = 0.;
+		numeric_t energy = 0.;
 		for (int i = 0; i < config.l.n_sites(); ++i)
-			energy += -config.l.parity(i) * config.param.stag_mu
-				* std::real(et_gf(i, i));
-		return energy;
+			energy += -config.l.parity(i) * config.param.stag_mu * et_gf(i, i);
+		return std::real(energy);
 	}
 };
 
@@ -139,19 +108,10 @@ struct wick_static_epsilon
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		double epsilon = 0.;
-		if (config.param.decoupling == "majorana")
-		{
-			for (auto& a : config.l.bonds("nearest neighbors"))
-				epsilon -= config.l.parity(a.first)
-					* std::imag(et_gf(a.second, a.first));
-		}
-		else
-		{
-			for (auto& a : config.l.bonds("nearest neighbors"))
-				epsilon += std::real(et_gf(a.second, a.first));
-		}
-		return epsilon / config.l.n_bonds();
+		numeric_t epsilon = 0.;
+		for (auto& a : config.l.bonds("nearest neighbors"))
+			epsilon += std::real(et_gf(a.second, a.first));
+		return std::real(epsilon) / config.l.n_bonds();
 	}
 };
 
@@ -166,10 +126,10 @@ struct wick_static_chern
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		double chern = 0.;
+		numeric_t chern = 0.;
 		for (auto& a : config.l.bonds("chern"))
 			chern += std::imag(et_gf(a.second, a.first) - et_gf(a.first, a.second));
-		return chern / config.l.n_bonds();
+		return std::real(chern) / config.l.n_bonds();
 	}
 };
 
@@ -184,7 +144,7 @@ struct wick_static_chern2
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		std::complex<double> ch = 0.;
+		numeric_t ch = 0.;
 		for (auto& a : config.l.bonds("chern"))
 			for (auto& b : config.l.bonds("chern"))
 			{
@@ -248,7 +208,7 @@ struct wick_static_S_chern_q
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		std::complex<double> S = 0., im = {0., 1.};
+		numeric_t S = 0.;
 		auto& q = config.l.symmetry_point("q");
 		for (auto& a : config.l.bonds("chern"))
 		{
@@ -265,7 +225,7 @@ struct wick_static_S_chern_q
 					- et_gf(b.first, a.first) * et_gf(b.second, a.second)
 					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
 					+ et_gf(b.first, a.second) * et_gf(b.second, a.first))
-					* (std::cos(qr) + im * std::sin(qr));
+					* std::cos(qr);
 			}
 		}
 		for (auto& a : config.l.bonds("chern_2"))
@@ -283,7 +243,7 @@ struct wick_static_S_chern_q
 					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
 					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
 					- et_gf(b.first, a.second) * et_gf(b.second, a.first))
-					* (std::cos(qr) + im * std::sin(qr));
+					* std::cos(qr);
 			}
 		}
 		for (auto& a : config.l.bonds("chern"))
@@ -301,7 +261,7 @@ struct wick_static_S_chern_q
 					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
 					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
 					- et_gf(b.first, a.second) * et_gf(b.second, a.first))
-					* (std::cos(qr) + im * std::sin(qr));
+					* std::cos(qr);
 			}
 		}
 		for (auto& a : config.l.bonds("chern_2"))
@@ -319,7 +279,7 @@ struct wick_static_S_chern_q
 					- et_gf(b.first, a.first) * et_gf(b.second, a.second)
 					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
 					+ et_gf(b.first, a.second) * et_gf(b.second, a.first))
-					* (std::cos(qr) + im * std::sin(qr));
+					* std::cos(qr);
 			}
 		}
 		return std::real(S) / std::pow(config.l.n_bonds(), 2);
@@ -582,24 +542,14 @@ struct wick_static_M2
 	double get_obs(const matrix_t& et_gf)
 	{
 		double M2 = 0.;
-		if (config.param.decoupling == "majorana")
-		{
-			for (int i = 0; i < config.l.n_sites(); ++i)
-				for (int j = 0; j < config.l.n_sites(); ++j)
-					M2 += config.l.parity(i) * config.l.parity(j) * std::real(et_gf(i, j)
-							* et_gf(i, j));
-		}
-		else
-		{
-			for (int i = 0; i < config.l.n_sites(); ++i)
-				for (int j = 0; j < config.l.n_sites(); ++j)
-				{
-					M2 += config.l.parity(i) * config.l.parity(j)
-						* std::real(((1. - et_gf(i, i)) * (1. - et_gf(j, j))
-						+ config.l.parity(i) * config.l.parity(j) * et_gf(i, j) * et_gf(i, j)
-						- (et_gf(i, i) + et_gf(j, j))/2. + 1./4.));
-				}
-		}
+		for (int i = 0; i < config.l.n_sites(); ++i)
+			for (int j = 0; j < config.l.n_sites(); ++j)
+			{
+				M2 += config.l.parity(i) * config.l.parity(j)
+					* std::real(((1. - et_gf(i, i)) * (1. - et_gf(j, j))
+					+ config.l.parity(i) * config.l.parity(j) * et_gf(i, j) * et_gf(i, j)
+					- (et_gf(i, i) + et_gf(j, j))/2. + 1./4.));
+			}
 		return M2 / std::pow(config.l.n_sites(), 2.);
 	}
 };
@@ -616,41 +566,23 @@ struct wick_static_S_cdw_q
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		double S = 0.;
-		std::complex<double> im = {0., 1.};
+		numeric_t S = 0.;
 		auto& q = config.l.symmetry_point("q");
-		if (config.param.decoupling == "majorana")
+		for (int i = 0; i < config.l.n_sites(); ++i)
 		{
-			for (int i = 0; i < config.l.n_sites(); ++i)
+			auto& r_i = config.l.real_space_coord(i);
+			for (int j = 0; j < config.l.n_sites(); ++j)
 			{
-				auto& r_i = config.l.real_space_coord(i);
-				for (int j = 0; j < config.l.n_sites(); ++j)
-				{
-					auto& r_j = config.l.real_space_coord(j);
-					double qr = q.dot(r_i - r_j);
-					S += config.l.parity(i) * config.l.parity(j) * std::real(et_gf(i, j)
-							* et_gf(i, j) * (std::cos(qr) + im * std::sin(qr)));
-				}
+				auto& r_j = config.l.real_space_coord(j);
+				auto& q = config.l.symmetry_point("q");
+				double qr = q.dot(r_i - r_j);
+				S += config.l.parity(i) * config.l.parity(j)
+					* ((1. - et_gf(i, i)) * (1. - et_gf(j, j))
+					+ config.l.parity(i) * config.l.parity(j) * et_gf(i, j) * et_gf(i, j)
+					- (et_gf(i, i) + et_gf(j, j))/2. + 1./4.) * std::cos(qr);
 			}
 		}
-		else
-		{
-			for (int i = 0; i < config.l.n_sites(); ++i)
-			{
-				auto& r_i = config.l.real_space_coord(i);
-				for (int j = 0; j < config.l.n_sites(); ++j)
-				{
-					auto& r_j = config.l.real_space_coord(j);
-					auto& q = config.l.symmetry_point("q");
-					double qr = q.dot(r_i - r_j);
-					S += config.l.parity(i) * config.l.parity(j)
-						* std::real(((1. - et_gf(i, i)) * (1. - et_gf(j, j))
-						+ config.l.parity(i) * config.l.parity(j) * et_gf(i, j) * et_gf(i, j)
-						- (et_gf(i, i) + et_gf(j, j))/2. + 1./4.) * (std::cos(qr) + im * std::sin(qr)));
-				}
-			}
-		}
-		return S / std::pow(config.l.n_sites(), 2.);
+		return std::real(S) / std::pow(config.l.n_sites(), 2.);
 	}
 };
 
@@ -687,13 +619,7 @@ struct wick_static_M4
 		mat44(3, 1) = et_gf(l, j) - delta_lj;
 		mat44(3, 2) = et_gf(l, k) - delta_lk;
 		
-		double parity;		
-		if (config.param.decoupling == "majorana")
-			parity = config.l.parity(i) * config.l.parity(j)
-				* config.l.parity(k) * config.l.parity(l);
-		else
-			parity = 1.;
-		return parity * std::real(mat44.determinant());
+		return std::real(mat44.determinant());
 	}
 	
 	double get_obs(const matrix_t& et_gf)
@@ -726,42 +652,23 @@ struct wick_static_kek
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		std::complex<double> kek = 0.;
+		numeric_t kek = 0.;
 		std::array<const std::vector<std::pair<int, int>>*, 3> kek_bonds =
 			{&config.l.bonds("kekule"), &config.l.bonds("kekule_2"),
 			&config.l.bonds("kekule_3")};
 		std::array<double, 3> factors = {-1., -1., 2.};
-		if (config.param.decoupling == "majorana")
-		{
-			for (int i = 0; i < kek_bonds.size(); ++i)
-				for (int m = 0; m < kek_bonds.size(); ++m)
-					for (int j = 0; j < kek_bonds[i]->size(); ++j)
-						for (int n = 0; n < kek_bonds[m]->size(); ++n)
-						{
-							auto& a = (*kek_bonds[i])[j];
-							auto& b = (*kek_bonds[m])[n];
-							
-							kek += factors[i] * factors[m]
-								* config.l.parity(a.first) * config.l.parity(b.first)
+		for (int i = 0; i < kek_bonds.size(); ++i)
+			for (int m = 0; m < kek_bonds.size(); ++m)
+				for (int j = 0; j < kek_bonds[i]->size(); ++j)
+					for (int n = 0; n < kek_bonds[m]->size(); ++n)
+					{
+						auto& a = (*kek_bonds[i])[j];
+						auto& b = (*kek_bonds[m])[n];
+						
+						kek += factors[i] * factors[m]
 								* (et_gf(a.second, a.first) * et_gf(b.first, b.second)
-								+ et_gf(b.first, a.first) * et_gf(b.second, a.second));
-						}
-		}
-		else
-		{
-			for (int i = 0; i < kek_bonds.size(); ++i)
-				for (int m = 0; m < kek_bonds.size(); ++m)
-					for (int j = 0; j < kek_bonds[i]->size(); ++j)
-						for (int n = 0; n < kek_bonds[m]->size(); ++n)
-						{
-							auto& a = (*kek_bonds[i])[j];
-							auto& b = (*kek_bonds[m])[n];
-							
-							kek += factors[i] * factors[m]
-									* (et_gf(a.second, a.first) * et_gf(b.first, b.second)
-									+ config.l.parity(a.first) * config.l.parity(b.first) * et_gf(a.first, b.first) * et_gf(a.second, b.second));
-						}
-		}
+								+ config.l.parity(a.first) * config.l.parity(b.first) * et_gf(a.first, b.first) * et_gf(a.second, b.second));
+					}
 		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
 	}
 };

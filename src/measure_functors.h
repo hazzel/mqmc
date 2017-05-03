@@ -63,9 +63,11 @@ struct measure_M
 {
 	configuration& config;
 	parser& pars;
+	typedef fast_update<arg_t>::numeric_t numeric_t;
 
 	void perform()
 	{
+		/*
 		std::vector<double> c(config.l.max_distance() + 1, 0.);
 		std::complex<double> energy = 0., m2 = 0., ep = 0., chern = 0.;
 		std::complex<double> n = 0.;
@@ -85,6 +87,7 @@ struct measure_M
 		config.measure.add("epsilon", std::real(ep));
 		config.measure.add("chern", std::real(chern));
 		config.measure.add("corr", c);
+		*/
 	}
 
 	void collect(std::ostream& os)

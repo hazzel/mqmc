@@ -11,14 +11,14 @@
 #include "parameters.h"
 #include "Random.h"
 
+template<typename numeric_t>
 class qr_stabilizer
 {
 	public:
-		using complex_t = std::complex<double>;
 		template<int n, int m>
-		using matrix_t = Eigen::Matrix<complex_t, n, m>;
+		using matrix_t = Eigen::Matrix<numeric_t, n, m>;
 		using dmatrix_t = matrix_t<Eigen::Dynamic, Eigen::Dynamic>;
-		using diag_matrix_t = Eigen::DiagonalMatrix<complex_t, Eigen::Dynamic>;
+		using diag_matrix_t = Eigen::DiagonalMatrix<numeric_t, Eigen::Dynamic>;
 
 		qr_stabilizer(measurements& measure_,
 			dmatrix_t& equal_time_gf_, dmatrix_t& time_displaced_gf_,
@@ -92,7 +92,7 @@ class qr_stabilizer
 		void set(int n, const dmatrix_t& b)
 		{
 			qr_solver.compute((b * U[n-1]) * D[n-1]);
-			dmatrix_t R = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+			dmatrix_t R = qr_solver.matrixQR().template triangularView<Eigen::Upper>();
 			U[n] = qr_solver.matrixQ();
 			D[n] = qr_solver.matrixQR().diagonal().asDiagonal();
 			V[n] = R * (qr_solver.colsPermutation()
@@ -124,7 +124,7 @@ class qr_stabilizer
 				qr_solver.compute(Pt);
 			else
 				qr_solver.compute(proj_U_l[n+1] * b);
-			dmatrix_t r = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+			dmatrix_t r = qr_solver.matrixQR().template triangularView<Eigen::Upper>();
 			proj_U_l[n] = r * qr_solver.colsPermutation().transpose();
 			for (int i = 0; i < proj_U_l[n].rows(); ++i)
 				proj_U_l[n].row(i) = 1./qr_solver.matrixQR()(i, i) * proj_U_l[n].row(i);
@@ -213,7 +213,7 @@ class qr_stabilizer
 				}
 
 				qr_solver.compute((b * U[n]) * D[n]);
-				dmatrix_t R = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+				dmatrix_t R = qr_solver.matrixQR().template triangularView<Eigen::Upper>();
 				U_l = U[n+1]; D_l = D[n+1]; V_l = V[n+1];
 				U[n+1] = qr_solver.matrixQ();
 				D[n+1] = qr_solver.matrixQR().diagonal().asDiagonal();
@@ -244,7 +244,7 @@ class qr_stabilizer
 			{
 				/*
 				qr_solver.compute(proj_U_l[n] * b);
-				dmatrix_t r = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+				dmatrix_t r = qr_solver.matrixQR().template triangularView<Eigen::Upper>();
 				proj_U_l[n-1] = r * qr_solver.colsPermutation().transpose();
 				for (int i = 0; i < proj_U_l[n-1].rows(); ++i)
 					proj_U_l[n-1].row(i) = 1./qr_solver.matrixQR()(i, i) * proj_U_l[n-1].row(i);
@@ -289,7 +289,7 @@ class qr_stabilizer
 
 				qr_solver.compute(D[n] * (U[n] * b));
 				dmatrix_t Q = qr_solver.matrixQ();
-				dmatrix_t R = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+				dmatrix_t R = qr_solver.matrixQR().template triangularView<Eigen::Upper>();
 				U_r = U[n-1]; D_r = D[n-1]; V_r = V[n-1];
 				V[n-1] = V[n] * Q;
 				D[n-1] = qr_solver.matrixQR().diagonal().asDiagonal();
@@ -322,7 +322,7 @@ class qr_stabilizer
 
 			qr_solver.compute(inv_U_r * inv_U_l + D_r_ * (V_r_ * V_l_) * D_l_);
 			dmatrix_t invQ = qr_solver.matrixQ().adjoint();
-			dmatrix_t R = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+			dmatrix_t R = qr_solver.matrixQR().template triangularView<Eigen::Upper>();
 			equal_time_gf = (inv_U_l * (qr_solver.colsPermutation()
 				* R.inverse())) * (invQ * inv_U_r);
 
@@ -354,7 +354,7 @@ class qr_stabilizer
 			M.bottomRightCorner(N, N) = inv_U_r * inv_U_l;
 
 			qr_solver.compute(M);
-			dmatrix_t R = qr_solver.matrixQR().triangularView<Eigen::Upper>();
+			dmatrix_t R = qr_solver.matrixQR().template triangularView<Eigen::Upper>();
 			dmatrix_t inv_V = qr_solver.colsPermutation() * R.inverse();
 			dmatrix_t inv_U = qr_solver.matrixQ().adjoint();
 

@@ -88,7 +88,7 @@ struct event_flip_all
 
 struct event_static_measurement
 {
-	typedef fast_update<qr_stabilizer>::dmatrix_t matrix_t;
+	typedef fast_update<arg_t>::dmatrix_t matrix_t;
 
 	configuration& config;
 	Random& rng;
@@ -157,7 +157,7 @@ struct event_static_measurement
 
 struct event_dynamic_measurement
 {
-	typedef fast_update<qr_stabilizer>::dmatrix_t matrix_t;
+	typedef fast_update<arg_t>::dmatrix_t matrix_t;
 
 	configuration& config;
 	Random& rng;
