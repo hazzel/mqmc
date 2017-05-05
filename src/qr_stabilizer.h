@@ -255,7 +255,6 @@ class qr_stabilizer
 				dmatrix_t p_q = dmatrix_t::Identity(Pt.rows(), Pt.cols());
 				proj_U_l[n-1] = p_q * qr_solver.matrixQ().adjoint();
 				
-					
 				dmatrix_t old_gf = id_N;
 				old_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
 				proj_W_r = proj_U_r[n-1];

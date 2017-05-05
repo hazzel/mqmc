@@ -732,17 +732,10 @@ class fast_update
 
 		void advance_backward()
 		{
-			//std::cout << "start backwards: equal_time_gf" << std::endl;
-			//equal_time_gf = id - proj_W_r * proj_W * proj_W_l;
-			//std::cout << equal_time_gf << std::endl;
 			if (param.use_projector)
 			{
 				multiply_propagator_from_left(proj_W_r, tau, -1);
 				multiply_propagator_from_right(proj_W_l, tau, 1);
-				
-				//std::cout << "after backwards: equal_time_gf" << std::endl;
-				//equal_time_gf = id - proj_W_r * proj_W * proj_W_l;
-				//std::cout << equal_time_gf << std::endl;
 			}
 			else
 			{
@@ -896,6 +889,7 @@ class fast_update
 		void measure_dynamical_observable(std::vector<std::vector<double>>&
 			dyn_tau, const std::vector<wick_base<dmatrix_t>>& obs)
 		{
+			check_td_gf_stability();
 			if (param.use_projector)
 			{
 				buffer_equal_time_gf();
@@ -1068,6 +1062,94 @@ class fast_update
 				else if (direction == -1)
 					tau = max_tau;
 			}
+		}
+		
+		void check_td_gf_stability()
+		{
+			buffer_equal_time_gf();
+			stabilizer.set_buffer();
+			std::vector<dmatrix_t> et_gf_L(param.n_discrete_tau);
+			std::vector<dmatrix_t> et_gf_R(2*param.n_discrete_tau);
+			std::vector<dmatrix_t> td_gf(2);
+			time_displaced_gf = id;
+			int direction;
+			if (tau >= max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
+				direction = -1;
+			else
+				direction = 1;
+			
+			while (tau != max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
+			{
+				if (direction == -1)
+				{
+					advance_backward();
+					stabilize_backward();
+				}
+				else
+				{
+					advance_forward();
+					stabilize_forward();
+				}
+			}
+			direction = -1;
+
+			for (int n = 0; n < param.n_discrete_tau; ++n)
+			{
+				for (int m = 0; m < param.n_dyn_tau; ++m)
+				{
+					if (direction == -1)
+					{
+						advance_backward();
+						stabilize_backward();
+					}
+					else
+					{
+						advance_forward();
+						stabilize_forward();
+					}
+				}
+				et_gf_L[n] = id;
+				et_gf_L[n].noalias() -= proj_W_r * proj_W * proj_W_l;
+			}
+			dmatrix_t& et_gf_0 = et_gf_L[param.n_discrete_tau - 1];
+			for (int n = 0; n < 2*param.n_discrete_tau; ++n)
+			{
+				for (int m = 0; m < param.n_dyn_tau; ++m)
+				{
+					if (direction == -1)
+					{
+						advance_backward();
+						stabilize_backward();
+					}
+					else
+					{
+						advance_forward();
+						stabilize_forward();
+					}
+				}
+				et_gf_R[n] = id;
+				et_gf_R[n].noalias() -= proj_W_r * proj_W * proj_W_l;
+			}
+			
+			for (int i = 1; i <= 2; ++i)
+			{
+				for (int n = 1; n <= param.n_discrete_tau / i; ++n)
+				{
+					dmatrix_t g_l = propagator(max_tau/2 + n*i,
+						max_tau/2 + (n-1)*i) * et_gf_L[et_gf_L.size() - n];
+					dmatrix_t g_r = propagator(max_tau/2 - (n-1)*i,
+						max_tau/2 - n*i) * et_gf_R[n-1];
+					
+					time_displaced_gf = g_l * time_displaced_gf;
+					time_displaced_gf = time_displaced_gf * g_r;
+					if (n*i == 2)
+						td_gf[i-1] = time_displaced_gf;
+				}
+			}
+			std::cout << "td_gf norm_error: " << (td_gf[0] - td_gf[1]).norm() << std::endl;
+
+			reset_equal_time_gf_to_buffer();
+			stabilizer.restore_buffer();
 		}
 	private:
 		void create_checkerboard()
