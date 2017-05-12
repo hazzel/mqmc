@@ -115,24 +115,6 @@ struct wick_static_epsilon
 	}
 };
 
-struct wick_static_chern
-{
-	configuration& config;
-	Random& rng;
-
-	wick_static_chern(configuration& config_, Random& rng_)
-		: config(config_), rng(rng_)
-	{}
-	
-	double get_obs(const matrix_t& et_gf)
-	{
-		numeric_t chern = 0.;
-		for (auto& a : config.l.bonds("chern"))
-			chern += std::imag(et_gf(a.second, a.first) - et_gf(a.first, a.second));
-		return std::real(chern) / config.l.n_bonds();
-	}
-};
-
 struct wick_static_chern2
 {
 	configuration& config;

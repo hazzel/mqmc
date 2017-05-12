@@ -143,30 +143,24 @@ class fast_update
 			{
 				dmatrix_t broken_H0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 				build_broken_dirac_H0(broken_H0);
-				symmetrize_EV(broken_H0);
-				Pt = P.adjoint();
+				get_trial_wavefunction(broken_H0);
 				stabilizer.set_P(P, Pt);
 			}
 			stabilizer.set_method(param.use_projector);
 		}
 
-		void symmetrize_EV(const dmatrix_t& H)
+		dmatrix_t symmetrize_EV(const dmatrix_t& S, const Eigen::VectorXd& en, const dmatrix_t& pm)
 		{
-			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
-			auto& S = solver.eigenvectors();
-			auto& en = solver.eigenvalues();
-			dmatrix_t pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
-			for (int i = 0; i < n_matrix_size; ++i)
-				pm(i, l.inverted_site(i)) = 1.;
 			double epsilon = std::pow(10., -4.);
 
 			dmatrix_t S_s = S + pm * S;
 			dmatrix_t S_a = S - pm * S;
-			dmatrix_t S_so(n_matrix_size, n_matrix_size);
-			dmatrix_t S_ao(n_matrix_size, n_matrix_size);
-			dmatrix_t S_f = dmatrix_t::Zero(n_matrix_size, 2*n_matrix_size);
+			dmatrix_t S_so(n_matrix_size, S.cols());
+			dmatrix_t S_ao(n_matrix_size, S.cols());
+			dmatrix_t S_f = dmatrix_t::Zero(n_matrix_size, 2*S.cols());
+			S_f.leftCols(S.cols()) = S;
 
-			for (int i = 0; i < n_matrix_size; ++i)
+			for (int i = 0; i < S.cols(); ++i)
 			{
 				if (S_s.col(i).norm() > epsilon)
 					S_s.col(i) /= S_s.col(i).norm();
@@ -179,10 +173,10 @@ class fast_update
 			}
 
 			int cnt = 0;
-			for (int i = 0; i < n_matrix_size; ++i)
+			for (int i = 0; i < S.cols(); ++i)
 			{
 				int j;
-				for (j = i; j < n_matrix_size && std::abs(en(j)-en(i)) < epsilon ; ++j)
+				for (j = i; j < S.cols() && std::abs(en(j)-en(i)) < epsilon ; ++j)
 				{
 					S_so.col(j) = S_s.col(j);
 					S_ao.col(j) = S_a.col(j);
@@ -191,6 +185,7 @@ class fast_update
 						S_so.col(j) -= S_so.col(k) * (S_so.col(k).dot(S_s.col(j)));
 						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).dot(S_a.col(j)));
 					}
+					//std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
 					if (S_so.col(j).norm() > epsilon)
 					{
 						S_so.col(j) /= S_so.col(j).norm();
@@ -206,82 +201,129 @@ class fast_update
 				}
 				i = j - 1;
 			}
-			double total_parity = 1;
-			std::vector<double> parity(n_matrix_size);
+			if (cnt != S.cols())
+			{
+				std::cout << "Error! Found " << cnt << " out of " << 2*S.cols() << std::endl;
+				throw(std::runtime_error("Error in symmetrization. Wrong number of states."));
+			}
+			return S_f.leftCols(S.cols());
+		}
+		
+		void get_trial_wavefunction(const dmatrix_t& H)
+		{
+			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
+			dmatrix_t inv_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size),
+				ph_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			for (int i = 0; i < n_matrix_size; ++i)
 			{
-				parity[i] = std::real(S_f.col(i).dot(pm * S_f.col(i)));
-				//std::cout << i << ": e = " << en[i] << ", P = " << parity[i] << std::endl;
+				inv_pm(i, l.inverted_site(i)) = 1.;
+				ph_pm(i, i) = l.parity(i);
+			}
+			double epsilon = std::pow(10., -4.), total_inv_parity = 1, total_ph_parity = 1;
+			auto S_f = symmetrize_EV(solver.eigenvectors(), solver.eigenvalues(), inv_pm);
+			std::vector<double> inv_parity(n_matrix_size), ph_parity(n_matrix_size);
+			for (int i = 0; i < n_matrix_size; ++i)
+				inv_parity[i] = std::real(S_f.col(i).dot(inv_pm * S_f.col(i)));
+			
+			/*
+			dmatrix_t plus_block(n_matrix_size, 2), minus_block(n_matrix_size, 2);
+			int cnt_p = 0, cnt_m = 0;
+			for (int i = n_matrix_size/2-2; i < n_matrix_size/2+2; ++i)
+			{
+				if (std::abs(inv_parity[i] - 1.) < epsilon)
+				{
+					plus_block.col(cnt_p) = S_f.col(i);
+					++cnt_p;
+				}
+				else if (std::abs(inv_parity[i] + 1.) < epsilon)
+				{
+					minus_block.col(cnt_m) = S_f.col(i);
+					++cnt_m;
+				}
+			}
+			Eigen::VectorXd ph_ev = Eigen::VectorXd::Zero(2);
+			S_f.block(0, n_matrix_size/2-2, n_matrix_size, 2) = symmetrize_EV(plus_block, ph_ev, ph_pm);
+			S_f.block(0, n_matrix_size/2, n_matrix_size, 2) = symmetrize_EV(minus_block, ph_ev, ph_pm);
+			*/
+			/*
+			Eigen::VectorXd ph_ev = Eigen::VectorXd::Zero(4);
+			dmatrix_t ph_block = S_f.block(0, n_matrix_size/2, n_matrix_size, 4);
+			S_f.block(0, n_matrix_size/2, n_matrix_size, 4) = symmetrize_EV(ph_block, ph_ev, ph_pm);
+			*/
+			
+			for (int i = 0; i < n_matrix_size; ++i)
+			{
+				ph_parity[i] = std::real(S_f.col(i).dot(ph_pm * S_f.col(i)));
+				//std::cout << i << ": e = " << solver.eigenvalues()[i] << ", P = " << inv_parity[i] << ", PH = " << ph_parity[i] << std::endl;
 			}
 			P.resize(n_matrix_size, n_matrix_size / 2);
 			
 			/*
 			for (int i = 0; i < n_matrix_size/2-1; ++i)
 			{
-				total_parity *= parity[i];
+				total_inv_parity *= inv_parity[i];
 				P.col(i) = S_f.col(i);
 			}
 			for (int i = n_matrix_size/2-1; i < n_matrix_size; ++i)
 			{
-				if (std::abs(param.inv_symmetry - total_parity*parity[i]) < epsilon)
+				if (std::abs(param.inv_symmetry - total_inv_parity*inv_parity[i]) < epsilon)
 				{
 					P.col(n_matrix_size/2-1) = S_f.col(i);
-					total_parity *= parity[i];
+					total_inv_parity *= inv_parity[i];
 					break;
 				}
 			}
 			*/
 			
+			
 			int c = 0;
 			for (int i = 1; i < n_matrix_size/2-2; ++i)
 			{
-				total_parity *= parity[i];
+				total_inv_parity *= inv_parity[i];
 				P.col(c) = S_f.col(i);
 				//std::cout << "taken: " << i << std::endl;
 				++c;
 			}
 			for (int i = n_matrix_size/2-2; i < n_matrix_size/2+2; ++i)
 			{
-				if (std::abs(parity[i] - 1.) < epsilon)
+				if (std::abs(inv_parity[i] - 1.) < epsilon)
 				{
-					total_parity *= parity[i];
+					total_inv_parity *= inv_parity[i];
 					P.col(c) = S_f.col(i);
 					//std::cout << "0 taken: " << i << std::endl;
 					++c;
 				}
 			}
-			if (std::abs(param.inv_symmetry - parity[0]*total_parity) < epsilon)
+			if (std::abs(param.inv_symmetry - inv_parity[0]*total_inv_parity) < epsilon)
 			{
-					total_parity *= parity[0];
+					total_inv_parity *= inv_parity[0];
 					P.col(c) = S_f.col(0);
 					//std::cout << "last taken: " << 0 << std::endl;
 					++c;
 			}
-			else if (std::abs(param.inv_symmetry - parity[n_matrix_size-1]*total_parity) < epsilon)
+			else if (std::abs(param.inv_symmetry - inv_parity[n_matrix_size-1]*total_inv_parity) < epsilon)
 			{
-					total_parity *= parity[n_matrix_size-1];
+					total_inv_parity *= inv_parity[n_matrix_size-1];
 					P.col(c) = S_f.col(n_matrix_size-1);
 					//std::cout << "last taken: " << n_matrix_size-1 << std::endl;
 					++c;
 			}
 			
 			
-			//std::cout << "Total parity: " << total_parity << std::endl;
-			if (cnt != n_matrix_size)
-			{
-				std::cout << "Error! Found " << cnt << " out of " << 2*n_matrix_size << std::endl;
-				throw(std::runtime_error("Error in symmetrization. Wrong number of states."));
-			}
-			if (std::abs(param.inv_symmetry - total_parity) > epsilon)
+			Pt = P.adjoint();
+			//std::cout << "Total inversion parity: " << total_inv_parity << std::endl;
+			if (std::abs(param.inv_symmetry - total_inv_parity) > epsilon)
 			{
 				std::cout << "Error! Wrong parity of trial wave function." << std::endl;
 				throw(std::runtime_error("Wrong parity in trial wave function."));
 			}
+			
 			if (c != n_matrix_size/2)
 			{
 				std::cout << "Error! Wrong number of states in trial wave function." << std::endl;
 				throw(std::runtime_error("Error in symmetrization. Wrong number of states."));
 			}
+			
 		}
 
 		void build_dirac_H0(dmatrix_t& H0)
@@ -1131,22 +1173,24 @@ class fast_update
 				et_gf_R[n].noalias() -= proj_W_r * proj_W * proj_W_l;
 			}
 			
-			for (int i = 1; i <= 2; ++i)
+			int dist[] = {1, 4};
+			for (int j = 0; j < 2; ++j)
 			{
+				int i = dist[j];
+				time_displaced_gf = id;
 				for (int n = 1; n <= param.n_discrete_tau / i; ++n)
 				{
 					dmatrix_t g_l = propagator(max_tau/2 + n*i,
-						max_tau/2 + (n-1)*i) * et_gf_L[et_gf_L.size() - n];
+						max_tau/2 + (n-1)*i) * et_gf_L[et_gf_L.size() - (n-1)*i - 1];
 					dmatrix_t g_r = propagator(max_tau/2 - (n-1)*i,
-						max_tau/2 - n*i) * et_gf_R[n-1];
+						max_tau/2 - n*i) * et_gf_R[n*i-1];
 					
 					time_displaced_gf = g_l * time_displaced_gf;
 					time_displaced_gf = time_displaced_gf * g_r;
-					if (n*i == 2)
-						td_gf[i-1] = time_displaced_gf;
 				}
+				td_gf[j] = time_displaced_gf;
 			}
-			std::cout << "td_gf norm_error: " << (td_gf[0] - td_gf[1]).norm() << std::endl;
+			measure.add("td_norm_error", (td_gf[0] - td_gf[1]).norm());
 
 			reset_equal_time_gf_to_buffer();
 			stabilizer.restore_buffer();

@@ -47,6 +47,7 @@ mc::mc(const std::string& dir)
 	config.param.lambda = std::acosh(std::exp(config.param.V * config.param.dtau / 2.));
 	config.param.kappa = std::acosh(std::exp(config.param.W * config.param.dtau / 2.));
 	config.param.inv_symmetry = pars.value_or_default<int>("inv_symmetry", 1);
+	config.param.ph_symmetry = pars.value_or_default<int>("ph_symmetry", 1);
 	config.param.n_flavor = pars.value_or_default<int>("flavor", 1);
 
 	if (config.param.stag_mu > 0. || config.param.stag_mu < 0. || config.param.tprime > 0.
@@ -123,6 +124,7 @@ void mc::init()
 	//Set up measurements
 	n_prebin *= config.param.n_tau_slices / 8 / n_static_cycles;
 	config.measure.add_observable("norm_error", n_prebin);
+	config.measure.add_observable("td_norm_error", n_prebin);
 	config.measure.add_observable("condition_number", n_prebin);
 	if (config.param.mu != 0 || config.param.stag_mu != 0)
 	{
@@ -141,7 +143,6 @@ void mc::init()
 	config.measure.add_observable("M4", n_prebin);
 	config.measure.add_observable("epsilon", n_prebin);
 	config.measure.add_observable("kekule", n_prebin);
-	config.measure.add_observable("chern", n_prebin);
 	config.measure.add_observable("chern2", n_prebin);
 	config.measure.add_observable("S_chern_q", n_prebin);
 	config.measure.add_observable("chern4", n_prebin);
