@@ -163,7 +163,7 @@ class lattice
 					for (int i = 0; i < n_sites(); ++i)
 					{
 						auto& R_i = real_space_coord(i);
-						if ((new_R - R_i).norm() < std::pow(10., -14.))
+						if ((new_R - R_i).norm() < std::pow(10., -10.))
 							return i;
 					}
 				}

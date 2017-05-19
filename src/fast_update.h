@@ -184,7 +184,7 @@ class fast_update
 						S_so.col(j) -= S_so.col(k) * (S_so.col(k).dot(S_s.col(j)));
 						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).dot(S_a.col(j)));
 					}
-					std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
+					//std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
 					if (S_so.col(j).norm() > epsilon)
 					{
 						S_so.col(j) /= S_so.col(j).norm();
@@ -247,7 +247,7 @@ class fast_update
 						S_so.col(j) -= S_so.col(k) * (S_so.col(k).dot(S_s.col(j)));
 						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).dot(S_a.col(j)));
 					}
-					std::cout << "orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
+					//std::cout << "orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
 					if (S_so.col(j).norm() > epsilon)
 					{
 						S_so.col(j) /= S_so.col(j).norm();
@@ -282,30 +282,30 @@ class fast_update
 			double epsilon = std::pow(10., -4.), total_inv_parity = 1, total_ph_parity = 1;
 			auto S_f = symmetrize_EV(solver.eigenvectors(), solver.eigenvalues(), inv_pm);
 			std::vector<double> inv_parity(n_matrix_size), ph_2p_parity(6);
-			std::cout << "after inversion symmetry" << std::endl;
+			//std::cout << "after inversion symmetry" << std::endl;
 			for (int i = 0; i < n_matrix_size; ++i)
 			{
 				inv_parity[i] = std::real(S_f.col(i).dot(inv_pm * S_f.col(i)));
-				std::cout << i << ": e = " << solver.eigenvalues()[i] << ", P = " << inv_parity[i] << std::endl;
+				//std::cout << i << ": e = " << solver.eigenvalues()[i] << ", P = " << inv_parity[i] << std::endl;
 			}
 			
 			dmatrix_t ph_1p_block = S_f.block(0, n_matrix_size/2-2, n_matrix_size, 4);
 			Eigen::VectorXd ph_ev = Eigen::VectorXd::Zero(4);
-			std::cout << "PH first" << std::endl;
+			//std::cout << "PH first" << std::endl;
 			ph_1p_block = symmetrize_EV(ph_1p_block, ph_ev, ph_pm);
 			for (int i = 0; i < ph_1p_block.cols(); ++i)
 			{
 				double inv_p = std::real(ph_1p_block.col(i).dot(inv_pm * ph_1p_block.col(i)));
 				ph_2p_parity[i] = std::real(ph_1p_block.col(i).dot(ph_pm * ph_1p_block.col(i)));
-				std::cout << i << ": e = " << ph_ev[i] << ", P = " << inv_p << ", PH = " << ph_2p_parity[i] << std::endl;
+				//std::cout << i << ": e = " << ph_ev[i] << ", P = " << inv_p << ", PH = " << ph_2p_parity[i] << std::endl;
 			}
-			std::cout << "PH second" << std::endl;
+			//std::cout << "PH second" << std::endl;
 			ph_1p_block = ph_symmetrize_EV(ph_1p_block, ph_pm);
 			for (int i = 0; i < ph_1p_block.cols(); ++i)
 			{
 				double inv_p = std::real(ph_1p_block.col(i).dot(inv_pm * ph_1p_block.col(i)));
 				ph_2p_parity[i] = std::real(ph_1p_block.col(i).dot(ph_pm * ph_1p_block.col(i)));
-				std::cout << i << ": e = " << ph_ev[i] << ", P = " << inv_p << ", PH = " << ph_2p_parity[i] << std::endl;
+				//std::cout << i << ": e = " << ph_ev[i] << ", P = " << inv_p << ", PH = " << ph_2p_parity[i] << std::endl;
 			}
 			std::vector<dmatrix_t> ph_2p_block(6, dmatrix_t(n_matrix_size, 2));
 			//PH = 1
@@ -322,8 +322,22 @@ class fast_update
 			ph_2p_block[4].col(1) = ph_1p_block.col(3);
 			ph_2p_block[5].col(0) = (ph_1p_block.col(0) + ph_1p_block.col(1))/std::sqrt(2.);
 			ph_2p_block[5].col(1) = (ph_1p_block.col(2) + ph_1p_block.col(3))/std::sqrt(2.);
-			ph_2p_parity = {1., 1., 1., -1., -1., -1.};
-			std::vector<double> inv_2p_parity = {-1., -1., -1., 1., 1., -1.};
+			ph_2p_parity = {-1., -1., -1., 1., 1., 1.};
+			std::vector<double> inv_2p_parity;// = {-1., -1., -1., 1., 1., -1.};
+			inv_2p_parity.push_back(ph_2p_block[0].col(0).dot(inv_pm * ph_2p_block[0].col(0))
+				* ph_2p_block[0].col(1).dot(inv_pm * ph_2p_block[0].col(1)));
+			inv_2p_parity.push_back(ph_2p_block[1].col(0).dot(inv_pm * ph_2p_block[1].col(0))
+				* ph_2p_block[1].col(1).dot(inv_pm * ph_2p_block[1].col(1)));
+			inv_2p_parity.push_back(ph_1p_block.col(0).dot(inv_pm * ph_1p_block.col(0))
+				* ph_1p_block.col(2).dot(inv_pm * ph_1p_block.col(2)));
+			
+			inv_2p_parity.push_back(ph_2p_block[3].col(0).dot(inv_pm * ph_2p_block[3].col(0))
+				* ph_2p_block[3].col(1).dot(inv_pm * ph_2p_block[3].col(1)));
+			inv_2p_parity.push_back(ph_2p_block[4].col(0).dot(inv_pm * ph_2p_block[4].col(0))
+				* ph_2p_block[4].col(1).dot(inv_pm * ph_2p_block[4].col(1)));
+			inv_2p_parity.push_back(ph_1p_block.col(0).dot(inv_pm * ph_1p_block.col(0))
+				* ph_1p_block.col(2).dot(inv_pm * ph_1p_block.col(2)));
+			
 			
 			P.resize(n_matrix_size, n_matrix_size / 2);
 			for (int i = 0; i < n_matrix_size/2-2; ++i)
@@ -331,37 +345,27 @@ class fast_update
 				total_inv_parity *= inv_parity[i];
 				P.col(i) = S_f.col(i);
 			}
-			for (int i = 0; i < ph_2p_block.size(); ++i)
-			{
-				std::cout << "i = " << i << ": E = 0, total invP = " << total_inv_parity*inv_2p_parity[i] << ", invP = " << inv_2p_parity[i] << ", phP = " << ph_2p_parity[i] << std::endl;
-			}
 			/*
 			for (int i = 0; i < ph_2p_block.size(); ++i)
-			{
-				//if (std::abs(param.inv_symmetry - total_inv_parity*inv_2p_parity[i]) < epsilon && std::abs(param.ph_symmetry - ph_2p_parity[i]) < epsilon)
-				if (std::abs(param.inv_symmetry - total_inv_parity*inv_2p_parity[i]) < epsilon)
+				std::cout << "i = " << i << ": E = 0, total invP = " << total_inv_parity*inv_2p_parity[i] << ", invP = " << inv_2p_parity[i] << ", phP = " << ph_2p_parity[i] << std::endl;
+			*/
+			int indices[] = {0, 1, 3, 4};
+			for (int i = 0; i < 4; ++i)
+				if (std::abs(total_inv_parity * inv_2p_parity[indices[i]] - param.inv_symmetry) < epsilon)
 				{
-					P.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[i];
-					total_inv_parity *= inv_2p_parity[i];
-					std::cout << "Taken: i=" << i << std::endl;
+					//std::cout << "Taken: i=" << indices[i] << std::endl;
+					P.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[indices[i]];
+					total_inv_parity *= inv_2p_parity[indices[i]];
 					break;
 				}
-			}
-			*/
-			int i = 2;
-			P.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[i];
-			total_inv_parity *= inv_2p_parity[i];
-			std::cout << "Taken: i=" << i << std::endl;
 			
 			Pt = P.adjoint();
-			/*
-			std::cout << "Total inversion parity: " << total_inv_parity << std::endl;
+			//std::cout << "Total inversion parity: " << total_inv_parity << std::endl;
 			if (std::abs(param.inv_symmetry - total_inv_parity) > epsilon)
 			{
 				std::cout << "Error! Wrong parity of trial wave function." << std::endl;
 				throw(std::runtime_error("Wrong parity in trial wave function."));
 			}
-			*/
 		}
 
 		void build_dirac_H0(dmatrix_t& H0)
