@@ -189,9 +189,11 @@ class qr_stabilizer
 				equal_time_gf = id_N;
 				equal_time_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
 				
+				/*
 				Eigen::JacobiSVD<dmatrix_t> svd(proj_W_l * proj_W_r, Eigen::ComputeThinU | Eigen::ComputeThinV);
 				double x = svd.singularValues().maxCoeff() / svd.singularValues().minCoeff();
 				measure.add("condition_number", x);
+				*/
 				
 				double ne = (old_gf - equal_time_gf).norm();
 				if (std::abs(ne) > std::pow(10., -6.))
@@ -263,9 +265,11 @@ class qr_stabilizer
 				equal_time_gf = id_N;
 				equal_time_gf.noalias() -= proj_W_r * proj_W * proj_W_l;
 				
+				/*
 				Eigen::JacobiSVD<dmatrix_t> svd(proj_W_l * proj_W_r, Eigen::ComputeThinU | Eigen::ComputeThinV);
 				double x = svd.singularValues().maxCoeff() / svd.singularValues().minCoeff();
 				measure.add("condition_number", x);
+				*/
 				
 				double ne = (old_gf - equal_time_gf).norm();
 				if (std::abs(ne) > std::pow(10., -6.))

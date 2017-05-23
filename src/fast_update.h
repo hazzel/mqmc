@@ -272,6 +272,12 @@ class fast_update
 		void get_trial_wavefunction(const dmatrix_t& H)
 		{
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
+			if (param.L % 3 != 0)
+			{
+				P = solver.eigenvectors().leftCols(n_matrix_size/2);
+				Pt = P.adjoint();
+				return;
+			}
 			dmatrix_t inv_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size),
 				ph_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			for (int i = 0; i < n_matrix_size; ++i)
@@ -393,18 +399,6 @@ class fast_update
 					broken_H0(a.first+as, a.second+as) = -param.tprime;
 				for (int i = 0; i < l.n_sites(); ++i)
 					broken_H0(i+as, i+as) = l.parity(i) * param.stag_mu + param.mu;
-
-				/*
-				for (auto& a : l.bonds("chern"))
-				{
-					//double tp = std::pow(10., -9.) * (2.*rng()-1.);
-					double tp = std::pow(10., -8.);
-					broken_H0(a.first+as, a.second+as) = {0., -tp};
-					broken_H0(a.second+as, a.first+as) = {0., tp};
-					broken_H0(l.inverted_site(a.first)+as, l.inverted_site(a.second)+as) = {0., -tp};
-					broken_H0(l.inverted_site(a.second)+as, l.inverted_site(a.first)+as) = {0., tp};
-				}
-				*/
 			}
 		}
 
@@ -988,21 +982,6 @@ class fast_update
 					direction = -1;
 				else
 					direction = 1;
-				
-				while (tau != max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
-				{
-					if (direction == -1)
-					{
-						advance_backward();
-						stabilize_backward();
-					}
-					else
-					{
-						advance_forward();
-						stabilize_forward();
-					}
-				}
-				direction = -1;
 
 				for (int n = 0; n < param.n_discrete_tau; ++n)
 				{
@@ -1093,10 +1072,10 @@ class fast_update
 					}
 					else
 					{
-						g_l = propagator(max_tau/2 + n*param.n_dyn_tau,
-							max_tau/2 + (n-1)*param.n_dyn_tau) * et_gf_R[n-1];
-						g_r = propagator(max_tau/2 - (n-1)*param.n_dyn_tau,
-							max_tau/2 - n*param.n_dyn_tau) * et_gf_L[et_gf_L.size() - n];
+						g_l = et_gf_R[n-1] * propagator(max_tau/2 + n*param.n_dyn_tau,
+							max_tau/2 + (n-1)*param.n_dyn_tau);
+						g_r = et_gf_L[et_gf_L.size() - n] * propagator(max_tau/2 - (n-1)*param.n_dyn_tau,
+							max_tau/2 - n*param.n_dyn_tau);
 					}
 					
 					time_displaced_gf = g_l * time_displaced_gf;
@@ -1104,9 +1083,11 @@ class fast_update
 						dyn_tau[i][2*n-1] = obs[i].get_obs(et_gf_0, et_gf_R[2*n-2],
 							time_displaced_gf);
 					time_displaced_gf = time_displaced_gf * g_r;
+					//std::cout << "n = " << n << ": " << time_displaced_gf.norm() << std::endl;
 					for (int i = 0; i < dyn_tau.size(); ++i)
 						dyn_tau[i][2*n] = obs[i].get_obs(et_gf_0, et_gf_R[2*n-1],
 							time_displaced_gf);
+					//std::cout << "n = " << n << ": " << time_displaced_gf.norm() << std::endl;
 				}
 				
 
@@ -1232,7 +1213,10 @@ class fast_update
 				}
 				td_gf[j] = time_displaced_gf;
 			}
-			measure.add("td_norm_error", (td_gf[0] - td_gf[1]).norm());
+			double tde = (td_gf[0] - td_gf[1]).norm();
+			measure.add("td_norm_error", tde);
+			if (tde > std::pow(10., -10.))
+				std::cout << "TD error: " << tde << std::endl;
 
 			reset_equal_time_gf_to_buffer();
 			stabilizer.restore_buffer();
