@@ -80,7 +80,6 @@ class fast_update
 			}
 			max_tau = size;
 			tau = max_tau;
-			partial_vertex = 0;
 			n_intervals = max_tau / param.n_delta;
 			stabilizer.resize(n_intervals, n_matrix_size);
 			rebuild();
@@ -97,7 +96,6 @@ class fast_update
 					}
 			max_tau = param.n_tau_slices;
 			tau = max_tau;
-			partial_vertex = 0;
 			n_intervals = max_tau / param.n_delta;
 			stabilizer.resize(n_intervals, n_matrix_size);
 			rebuild();
@@ -463,11 +461,6 @@ class fast_update
 					return i;
 		}
 
-		int get_partial_vertex() const
-		{
-			return partial_vertex;
-		}
-
 		const arg_t& get_spins(int t, int alpha=0, int beta=0) const
 		{
 			return aux_spins[alpha][beta][t-1];
@@ -491,11 +484,6 @@ class fast_update
 		void update_tau()
 		{
 			tau += param.direction;
-		}
-		
-		void set_partial_vertex(int partial_n)
-		{
-			partial_vertex = partial_n;
 		}
 
 		int bond_index(int i, int j) const
@@ -540,7 +528,6 @@ class fast_update
 			}
 			else
 				gf_buffer = equal_time_gf;
-			gf_buffer_partial_vertex = partial_vertex;
 			gf_buffer_tau = tau;
 			dir_buffer = param.direction;
 		}
@@ -557,7 +544,6 @@ class fast_update
 			}
 			else
 				equal_time_gf = gf_buffer;
-			partial_vertex = gf_buffer_partial_vertex;
 			tau = gf_buffer_tau;
 			param.direction = dir_buffer;
 		}
@@ -581,7 +567,6 @@ class fast_update
 			aux_spins = args;
 			max_tau = param.n_tau_slices;
 			tau = max_tau;
-			partial_vertex = 0;
 			n_intervals = max_tau / param.n_delta;
 			stabilizer.resize(n_intervals, n_matrix_size);
 			rebuild();
@@ -1203,7 +1188,6 @@ class fast_update
 		measurements& measure;
 		int n_intervals;
 		int tau;
-		int partial_vertex;
 		int max_tau;
 		boost::multi_array<arg_t, 3> aux_spins;
 		std::map<std::pair<int, int>, int> bond_indices;
@@ -1224,7 +1208,6 @@ class fast_update
 		dmatrix_t W_r_buffer;
 		dmatrix_t W_buffer;
 		int dir_buffer;
-		int gf_buffer_partial_vertex;
 		int gf_buffer_tau;
 		dmatrix_t id;
 		dmatrix_t id_2;
