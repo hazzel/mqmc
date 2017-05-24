@@ -154,9 +154,11 @@ class qr_stabilizer
 				proj_W_l = proj_U_l[n];
 				proj_W = (proj_W_l * proj_W_r).inverse();
 				
+				/*
 				Eigen::JacobiSVD<dmatrix_t> svd(proj_W_l * proj_W_r, Eigen::ComputeThinU | Eigen::ComputeThinV);
 				double x = svd.singularValues().maxCoeff() / svd.singularValues().minCoeff();
 				measure.add("condition_number", x);
+				*/
 				
 				/*
 				double y = (proj_U_r[n].adjoint() * proj_U_r[n] - p_q.adjoint() * id_N * p_q).norm();

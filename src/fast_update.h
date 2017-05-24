@@ -512,6 +512,16 @@ class fast_update
 		{
 			return cb_bonds[i];
 		}
+		
+		const std::vector<std::pair<int, int>>& get_nn_bonds(int b) const
+		{
+			return nn_bonds[b];
+		}
+		
+		const std::vector<std::pair<int, int>>& get_inv_nn_bonds(int b) const
+		{
+			return inv_nn_bonds[b];
+		}
 
 		void flip_spin(const std::pair<int, int>& b, int alpha = 0, int beta = 0)
 		{
@@ -649,27 +659,76 @@ class fast_update
 					+ old_m.col(j+bs) * (*vm)(1, 1);
 			}
 		}
-
-		void prepare_flip()
+		
+		void multiply_from_left(dmatrix_t& m, dmatrix_t& vm, int i, int j)
 		{
-			if (param.use_projector)
-			{
-				proj_W_l = proj_W_l * expH0;
-				proj_W_r = invExpH0 * proj_W_r;
-			}
-			else
-				equal_time_gf = invExpH0 * equal_time_gf * expH0;
+			dmatrix_t old_i = m.row(i), old_j = m.row(j);
+			m.row(i).noalias() = old_i * vm(0, 0) + old_j * vm(0, 1);
+			m.row(j).noalias() = old_i * vm(1, 0) + old_j * vm(1, 1);
 		}
 
-		void prepare_measurement()
+		void multiply_from_right(dmatrix_t& m, dmatrix_t& vm, int i, int j)
 		{
+			dmatrix_t old_i = m.col(i), old_j = m.col(j);
+			m.col(i).noalias() = old_i * vm(0, 0) + old_j * vm(1, 0);
+			m.col(j).noalias() = old_i * vm(0, 1) + old_j * vm(1, 1);
+		}
+		
+		void multiply_T_matrix()
+		{
+			if (!param.multiply_T)
+				return;
 			if (param.use_projector)
 			{
-				proj_W_l = proj_W_l * invExpH0;
-				proj_W_r = expH0 * proj_W_r;
+				if (param.direction == 1)
+				{
+					proj_W_l = proj_W_l * invExpH0;
+					proj_W_r = expH0 * proj_W_r;
+				}
+				else if (param.direction == -1)
+				{
+					proj_W_l = proj_W_l * expH0;
+					proj_W_r = invExpH0 * proj_W_r;
+				}
 			}
 			else
-				equal_time_gf = expH0 * equal_time_gf * invExpH0;
+			{
+				if (param.direction == 1)
+					equal_time_gf = expH0 * equal_time_gf * invExpH0;
+				else if (param.direction == -1)
+					equal_time_gf = invExpH0 * equal_time_gf * expH0;
+			}
+		}
+		
+		void multiply_Gamma_matrix(int bond_type, int alpha, int beta)
+		{
+			auto& vertex = get_spins(tau, alpha, beta);
+			if (param.use_projector)
+			{
+				if (param.direction == 1)
+				{
+					multiply_vertex_from_left(proj_W_r, bond_type, vertex, alpha, beta, 1);
+					multiply_vertex_from_right(proj_W_l, bond_type, vertex, alpha, beta, -1);
+				}
+				else if (param.direction == -1)
+				{
+					multiply_vertex_from_left(proj_W_r, bond_type, vertex, alpha, beta, -1);
+					multiply_vertex_from_right(proj_W_l, bond_type, vertex, alpha, beta, 1);
+				}
+			}
+			else
+			{
+				if (param.direction == 1)
+				{
+					multiply_vertex_from_left(equal_time_gf, bond_type, vertex, alpha, beta, 1);
+					multiply_vertex_from_right(equal_time_gf, bond_type, vertex, alpha, beta, -1);
+				}	
+				else if (param.direction == -1)
+				{
+					multiply_vertex_from_left(equal_time_gf, bond_type, vertex, alpha, beta, -1);
+					multiply_vertex_from_right(equal_time_gf, bond_type, vertex, alpha, beta, 1);
+				}
+			}
 		}
 
 		dmatrix_t propagator(int tau_n, int tau_m)
@@ -677,9 +736,6 @@ class fast_update
 			dmatrix_t b = id;
 			for (int n = tau_n; n > tau_m; --n)
 			{
-				if (param.multiply_T)
-					b *= expH0;
-				
 				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 					for (int beta = 0; beta < param.n_flavor; ++beta)
 					{
@@ -687,142 +743,34 @@ class fast_update
 						for (int bt = 0; bt < cb_bonds.size(); ++bt)
 							multiply_vertex_from_right(b, bt, vertex, alpha, beta, 1);
 					}
+				if (param.multiply_T)
+					b *= expH0;
 			}
 			return b;
 		}
-
-		void multiply_propagator_from_left(dmatrix_t& m, int tau, int inv)
+		
+		void advance_time_slice()
 		{
-			if (inv == 1)
+			if (param.direction == 1)
 			{
+				update_tau();
+				multiply_T_matrix();
+				
 				for (int alpha = param.n_flavor - 1; alpha >= 0; --alpha)
 					for (int beta = param.n_flavor - 1; beta >= 0; --beta)
-					{
-						auto& vertex = get_spins(tau, alpha, beta);
-						for (int bt = cb_bonds.size() - 1; bt >= 0; --bt)
-							multiply_vertex_from_left(m, bt, vertex, alpha, beta, 1);
-					}
-				if (param.multiply_T)
-					m = expH0 * m;
+						for (int bt = nn_bonds.size() - 1; bt >= 0; --bt)
+							multiply_Gamma_matrix(bt, alpha, beta);
 			}
-			else if (inv == -1)
+			else if (param.direction == -1)
 			{
-				if (param.multiply_T)
-					m = invExpH0 * m;
 				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 					for (int beta = 0; beta < param.n_flavor; ++beta)
-					{
-						auto& vertex = get_spins(tau, alpha, beta);
-						for (int bt = 0; bt < cb_bonds.size(); ++bt)
-							multiply_vertex_from_left(m, bt, vertex, alpha, beta, -1);
-					}
+						for (int bt = 0; bt < nn_bonds.size(); ++bt)
+							multiply_Gamma_matrix(bt, alpha, beta);
+				
+				update_tau();
+				multiply_T_matrix();
 			}
-		}
-
-		void multiply_propagator_from_right(dmatrix_t& m, int tau, int inv)
-		{
-			if (inv == 1)
-			{
-				if (param.multiply_T)
-					m = m * expH0;
-				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
-					for (int beta = 0; beta < param.n_flavor; ++beta)
-					{
-						auto& vertex = get_spins(tau, alpha, beta);
-						for (int bt = 0; bt < cb_bonds.size(); ++bt)
-							multiply_vertex_from_right(m, bt, vertex, alpha, beta, 1);
-					}
-			}
-			else if (inv == -1)
-			{
-				for (int alpha = param.n_flavor - 1; alpha >= 0; --alpha)
-					for (int beta = param.n_flavor - 1; beta >= 0; --beta)
-					{
-						auto& vertex = get_spins(tau, alpha, beta);
-						for (int bt = cb_bonds.size() - 1; bt >= 0; --bt)
-							multiply_vertex_from_right(m, bt, vertex, alpha, beta, -1);
-					}
-				if (param.multiply_T)
-					m = m * invExpH0;
-			}
-		}
-
-		void partial_advance(int partial_n, int alpha = 0, int beta = 0)
-		{
-			int& p = partial_vertex;
-			auto& vertex = get_spins(tau, alpha, beta);
-			while (partial_n > p)
-			{
-				int bond_type = (p < cb_bonds.size()) ? p : 2*(cb_bonds.size()-1)-p;
-				if (param.use_projector)
-				{
-					multiply_vertex_from_left(proj_W_r,
-						bond_type, vertex, alpha, beta, -1);
-					multiply_vertex_from_right(proj_W_l,
-						bond_type, vertex, alpha, beta, 1);
-				}
-				else
-				{
-					multiply_vertex_from_left(equal_time_gf,
-						bond_type, vertex, alpha, beta, -1);
-					multiply_vertex_from_right(equal_time_gf,
-						bond_type, vertex, alpha, beta, 1);
-				}
-				++p;
-			}
-			while (partial_n < p)
-			{
-				--p;
-				int bond_type = (p < cb_bonds.size()) ? p : 2*(cb_bonds.size()-1)-p;
-				if (param.use_projector)
-				{
-					multiply_vertex_from_left(proj_W_r,
-						bond_type, vertex, alpha, beta, 1);
-					multiply_vertex_from_right(proj_W_l,
-						bond_type, vertex, alpha, beta, -1);
-				}
-				else
-				{
-					multiply_vertex_from_left(equal_time_gf,
-						bond_type, vertex, alpha, beta, 1);
-					multiply_vertex_from_right(equal_time_gf,
-						bond_type, vertex, alpha, beta, -1);
-				}
-			}
-		}
-
-		void advance_forward()
-		{
-			if (param.use_projector)
-			{
-				multiply_propagator_from_left(proj_W_r, tau + 1, 1);
-				multiply_propagator_from_right(proj_W_l, tau + 1, -1);
-			}
-			else
-			{
-				if (update_time_displaced_gf)
-					multiply_propagator_from_left(time_displaced_gf, tau + 1, 1);
-				multiply_propagator_from_left(equal_time_gf, tau + 1, 1);
-				multiply_propagator_from_right(equal_time_gf, tau + 1, -1);
-			}
-			++tau;
-		}
-
-		void advance_backward()
-		{
-			if (param.use_projector)
-			{
-				multiply_propagator_from_left(proj_W_r, tau, -1);
-				multiply_propagator_from_right(proj_W_l, tau, 1);
-			}
-			else
-			{
-				if (update_time_displaced_gf)
-					multiply_propagator_from_right(time_displaced_gf, tau, 1);
-				multiply_propagator_from_left(equal_time_gf, tau, -1);
-				multiply_propagator_from_right(equal_time_gf, tau, 1);
-			}
-			--tau;
 		}
 
 		void stabilize_forward()
@@ -977,26 +925,21 @@ class fast_update
 				std::vector<dmatrix_t> n1_td_gf(2*param.n_discrete_tau);
 				std::vector<dmatrix_t> td_gf(2*param.n_discrete_tau);
 				time_displaced_gf = id;
-				int direction;
-				if (tau >= max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
-					direction = -1;
-				else
-					direction = 1;
+				
+				if (tau == max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
+					param.direction = -1;
+				else if (tau == max_tau/2 - param.n_discrete_tau * param.n_dyn_tau)
+					param.direction = 1;
 
 				for (int n = 0; n < param.n_discrete_tau; ++n)
 				{
 					for (int m = 0; m < param.n_dyn_tau; ++m)
 					{
-						if (direction == -1)
-						{
-							advance_backward();
+						advance_time_slice();
+						if (param.direction == -1)
 							stabilize_backward();
-						}
 						else
-						{
-							advance_forward();
 							stabilize_forward();
-						}
 					}
 					et_gf_L[n] = id;
 					et_gf_L[n].noalias() -= proj_W_r * proj_W * proj_W_l;
@@ -1007,16 +950,11 @@ class fast_update
 				{
 					for (int m = 0; m < param.n_dyn_tau; ++m)
 					{
-						if (direction == -1)
-						{
-							advance_backward();
+						advance_time_slice();
+						if (param.direction == -1)
 							stabilize_backward();
-						}
 						else
-						{
-							advance_forward();
 							stabilize_forward();
-						}
 					}
 					et_gf_R[n] = id;
 					et_gf_R[n].noalias() -= proj_W_r * proj_W * proj_W_l;
@@ -1063,7 +1001,7 @@ class fast_update
 				for (int n = 1; n <= param.n_discrete_tau; ++n)
 				{
 					dmatrix_t g_l, g_r;
-					if (direction == -1)
+					if (param.direction == -1)
 					{
 						g_l = propagator(max_tau/2 + n*param.n_dyn_tau,
 							max_tau/2 + (n-1)*param.n_dyn_tau) * et_gf_L[et_gf_L.size() - n];
@@ -1098,6 +1036,8 @@ class fast_update
 			{
 				// 1 = forward, -1 = backward
 				int direction = tau == 0 ? 1 : -1;
+				dir_buffer = param.direction;
+				param.direction = direction;
 				dmatrix_t et_gf_0 = equal_time_gf;
 				enable_time_displaced_gf(direction);
 				time_displaced_gf = equal_time_gf;
@@ -1112,12 +1052,12 @@ class fast_update
 					}
 					if (direction == 1 && tau < max_tau)
 					{
-						advance_forward();
+						advance_time_slice();
 						stabilize_forward();
 					}
 					else if (direction == -1 && tau > 0)
 					{
-						advance_backward();
+						advance_time_slice();
 						stabilize_backward();
 					}
 				}
@@ -1126,6 +1066,7 @@ class fast_update
 					tau = 0;
 				else if (direction == -1)
 					tau = max_tau;
+				param.direction = dir_buffer;
 			}
 		}
 		
@@ -1137,41 +1078,21 @@ class fast_update
 			std::vector<dmatrix_t> et_gf_R(2*param.n_discrete_tau);
 			std::vector<dmatrix_t> td_gf(2);
 			time_displaced_gf = id;
-			int direction;
-			if (tau >= max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
-				direction = -1;
-			else
-				direction = 1;
 			
-			while (tau != max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
-			{
-				if (direction == -1)
-				{
-					advance_backward();
-					stabilize_backward();
-				}
-				else
-				{
-					advance_forward();
-					stabilize_forward();
-				}
-			}
-			direction = -1;
+			if (tau == max_tau/2 + param.n_discrete_tau * param.n_dyn_tau)
+				param.direction = -1;
+			else if (tau == max_tau/2 - param.n_discrete_tau * param.n_dyn_tau)
+				param.direction = 1;
 
 			for (int n = 0; n < param.n_discrete_tau; ++n)
 			{
 				for (int m = 0; m < param.n_dyn_tau; ++m)
 				{
-					if (direction == -1)
-					{
-						advance_backward();
+					advance_time_slice();
+					if (param.direction == -1)
 						stabilize_backward();
-					}
 					else
-					{
-						advance_forward();
 						stabilize_forward();
-					}
 				}
 				et_gf_L[n] = id;
 				et_gf_L[n].noalias() -= proj_W_r * proj_W * proj_W_l;
@@ -1181,16 +1102,11 @@ class fast_update
 			{
 				for (int m = 0; m < param.n_dyn_tau; ++m)
 				{
-					if (direction == -1)
-					{
-						advance_backward();
+					advance_time_slice();
+					if (param.direction == -1)
 						stabilize_backward();
-					}
 					else
-					{
-						advance_forward();
 						stabilize_forward();
-					}
 				}
 				et_gf_R[n] = id;
 				et_gf_R[n].noalias() -= proj_W_r * proj_W * proj_W_l;
@@ -1203,10 +1119,21 @@ class fast_update
 				time_displaced_gf = id;
 				for (int n = 1; n <= param.n_discrete_tau / i; ++n)
 				{
-					dmatrix_t g_l = propagator(max_tau/2 + n*i,
-						max_tau/2 + (n-1)*i) * et_gf_L[et_gf_L.size() - (n-1)*i - 1];
-					dmatrix_t g_r = propagator(max_tau/2 - (n-1)*i,
-						max_tau/2 - n*i) * et_gf_R[n*i-1];
+					dmatrix_t g_l, g_r;
+					if (param.direction == -1)
+					{
+						g_l = propagator(max_tau/2 + n*param.n_dyn_tau*i,
+							max_tau/2 + (n-1)*param.n_dyn_tau*i) * et_gf_L[et_gf_L.size() - (n-1)*i - 1];
+						g_r = propagator(max_tau/2 - (n-1)*param.n_dyn_tau*i,
+							max_tau/2 - n*param.n_dyn_tau*i) * et_gf_R[n*i-1];
+					}
+					else
+					{
+						g_l = et_gf_R[n*i-1] * propagator(max_tau/2 + n*param.n_dyn_tau*i,
+							max_tau/2 + (n-1)*param.n_dyn_tau*i);
+						g_r = et_gf_L[et_gf_L.size() - (n-1)*i - 1] * propagator(max_tau/2 - (n-1)*param.n_dyn_tau*i,
+							max_tau/2 - n*param.n_dyn_tau*i);
+					}
 					
 					time_displaced_gf = g_l * time_displaced_gf;
 					time_displaced_gf = time_displaced_gf * g_r;
@@ -1249,6 +1176,19 @@ class fast_update
 					}
 				}
 			}
+			
+			nn_bonds.resize(3);
+			for (int b = 0; b < 3; ++b)
+				for (int i = 0; i < l.n_sites(); ++i)
+				{
+					int j = cb_bonds[b][i];
+					if (i > j) continue;
+					nn_bonds[b].push_back({i, j});
+				}
+			inv_nn_bonds.resize(3);
+			for (int b = 0; b < 3; ++b)
+				for (int i = nn_bonds[b].size() - 1; i >= 0; --i)
+					inv_nn_bonds[b].push_back(nn_bonds[b][i]);
 		}
 
 		void print_matrix(const dmatrix_t& m)
@@ -1298,5 +1238,7 @@ class fast_update
 		dmatrix_t M;
 		std::pair<int, int> last_flip;
 		std::vector<std::map<int, int>> cb_bonds;
+		std::vector<std::vector<std::pair<int, int>>> nn_bonds;
+		std::vector<std::vector<std::pair<int, int>>> inv_nn_bonds;
 		stabilizer_t stabilizer;
 };
