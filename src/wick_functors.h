@@ -90,12 +90,15 @@ struct wick_epsilon
 	{
 		numeric_t ep = 0.;
 		for (auto& a : config.l.bonds("nearest neighbors"))
+		{
+			if (a.first > a.second) continue;
 			for (auto& b : config.l.bonds("nearest neighbors"))
 			{
 				ep += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
 						+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
-		return std::real(ep) / std::pow(config.l.n_bonds(), 2.);
+		}
+		return std::real(2.*ep) / std::pow(config.l.n_bonds(), 2.);
 	}
 };
 
@@ -121,9 +124,9 @@ struct wick_epsilon_V
 			for (auto& b : config.l.bonds("nearest neighbors"))
 			{
 				int m = b.first, n = b.second;
+				if (m > n) continue;
 				double delta_mm = 1., delta_nn = 1.;
 				double delta_mn = (m == n ? 1. : 0.);
-				if (m > n) continue;
 				ep += (delta_ii - et_gf_t(i, i)) * ((delta_jj - et_gf_t(j, j)) * ((delta_mm - et_gf_0(m, m)) * ((delta_nn - et_gf_0(n, n))) + (delta_mn - et_gf_0(n, m)) * (et_gf_0(m, n))) + (config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * (td_gf(j, m) * ((delta_nn - et_gf_0(n, n))) + (-td_gf(j, n)) * ((delta_mn - et_gf_0(n, m)))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (td_gf(j, m) * (et_gf_0(m, n)) + td_gf(j, n) * ((delta_mm - et_gf_0(m, m)))))
 				+ (delta_ij - et_gf_t(j, i)) * (et_gf_t(i, j) * ((delta_mm - et_gf_0(m, m)) * ((delta_nn - et_gf_0(n, n))) + (delta_mn - et_gf_0(n, m)) * (et_gf_0(m, n))) + (-td_gf(i, m)) * ((config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * ((delta_nn - et_gf_0(n, n))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (et_gf_0(m, n))) + (-td_gf(i, n)) * ((-config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * ((delta_mn - et_gf_0(n, m))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * ((delta_mm - et_gf_0(m, m)))))
 				+ (config.l.parity(i)*config.l.parity(m)*td_gf(m, i)) * (et_gf_t(i, j) * (td_gf(j, m) * ((delta_nn - et_gf_0(n, n))) + (-td_gf(j, n)) * ((delta_mn - et_gf_0(n, m)))) + td_gf(i, m) * ((delta_jj - et_gf_t(j, j)) * ((delta_nn - et_gf_0(n, n))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (td_gf(j, n))) + (-td_gf(i, n)) * ((delta_jj - et_gf_t(j, j)) * ((delta_mn - et_gf_0(n, m))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (td_gf(j, m))))
@@ -133,6 +136,18 @@ struct wick_epsilon_V
 		return std::real(ep) / std::pow(config.l.n_bonds(), 2.);
 	}
 };
+
+/*
+std::vector<numeric_t> values;
+				numeric_t x =;
+				bool found = false;
+				for (auto v : values)
+					if (std::abs(v - x) < std::pow(10., -12.))
+						found = true;
+				if (!found)
+					values.push_back(x);
+				std::cout << values.size() << " unique values of " << 4.*std::pow(config.l.n_bonds(), 2.) << std::endl;
+*/
 
 struct wick_epsilon_as
 {

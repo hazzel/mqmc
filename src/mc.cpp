@@ -50,8 +50,10 @@ mc::mc(const std::string& dir)
 	config.param.ph_symmetry = pars.value_or_default<int>("ph_symmetry", 1);
 	config.param.n_flavor = pars.value_or_default<int>("flavor", 1);
 
+	//if (config.param.stag_mu > 0. || config.param.stag_mu < 0. || config.param.tprime > 0.
+	//	|| config.param.tprime < 0. || config.param.decoupling == "dirac")
 	if (config.param.stag_mu > 0. || config.param.stag_mu < 0. || config.param.tprime > 0.
-		|| config.param.tprime < 0. || config.param.decoupling == "dirac")
+		|| config.param.tprime < 0.)
 		config.param.multiply_T = true;
 	else
 		config.param.multiply_T = false;

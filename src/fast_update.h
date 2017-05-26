@@ -123,7 +123,7 @@ class fast_update
 			build_vertex_matrices();
 
 			dmatrix_t H0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
-			build_dirac_H0(H0);
+			build_dirac_T(H0);
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H0);
 			expH0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			invExpH0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
@@ -139,9 +139,9 @@ class fast_update
 
 			if (param.use_projector)
 			{
-				dmatrix_t broken_H0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
-				build_broken_dirac_H0(broken_H0);
-				get_trial_wavefunction(broken_H0);
+				H0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
+				build_dirac_H0(H0);
+				get_trial_wavefunction(H0);
 				stabilizer.set_P(P, Pt);
 			}
 			stabilizer.set_method(param.use_projector);
@@ -385,18 +385,16 @@ class fast_update
 					H0(i+as, i+as) = l.parity(i) * param.stag_mu + param.mu;
 			}
 		}
-
-		void build_broken_dirac_H0(dmatrix_t& broken_H0)
+		
+		void build_dirac_T(dmatrix_t& H0)
 		{
 			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 			{
 				int as = alpha * l.n_sites();
-				for (auto& a : l.bonds("nearest neighbors"))
-					broken_H0(a.first+as, a.second+as) = -param.t;
 				for (auto& a : l.bonds("d3_bonds"))
-					broken_H0(a.first+as, a.second+as) = -param.tprime;
+					H0(a.first+as, a.second+as) = -param.tprime;
 				for (int i = 0; i < l.n_sites(); ++i)
-					broken_H0(i+as, i+as) = l.parity(i) * param.stag_mu + param.mu;
+					H0(i+as, i+as) = l.parity(i) * param.stag_mu + param.mu;
 			}
 		}
 
@@ -404,12 +402,14 @@ class fast_update
 		{
 			if (flavor == 0)
 			{
-				numeric_t c = std::cosh(param.lambda * spin);
-				numeric_t s = std::sinh(param.lambda * spin);
+				numeric_t c = std::cosh(param.t * param.dtau + param.lambda * spin);
+				numeric_t s = std::sinh(param.t * param.dtau + param.lambda * spin);
+				numeric_t cp = std::cosh(param.t * param.dtau - param.lambda * spin);
+				numeric_t sp = std::sinh(param.t * param.dtau - param.lambda * spin);
 
 				vertex_matrices[cnt] << c, s, s, c;
 				inv_vertex_matrices[cnt] << c, -s, -s, c;
-				delta_matrices[cnt] << c*c + s*s - 1., -2.*c*s, -2.*c*s, c*c + s*s - 1.;
+				delta_matrices[cnt] << cp*c - sp*s - 1., -cp*s+sp*c, sp*c-cp*s, -sp*s + cp*c - 1.;
 			}
 			else if (flavor == 1)
 			{
@@ -643,20 +643,6 @@ class fast_update
 				m.col(j+bs).noalias() = old_m.col(i+as) * (*vm)(0, 1)
 					+ old_m.col(j+bs) * (*vm)(1, 1);
 			}
-		}
-		
-		void multiply_from_left(dmatrix_t& m, dmatrix_t& vm, int i, int j)
-		{
-			dmatrix_t old_i = m.row(i), old_j = m.row(j);
-			m.row(i).noalias() = old_i * vm(0, 0) + old_j * vm(0, 1);
-			m.row(j).noalias() = old_i * vm(1, 0) + old_j * vm(1, 1);
-		}
-
-		void multiply_from_right(dmatrix_t& m, dmatrix_t& vm, int i, int j)
-		{
-			dmatrix_t old_i = m.col(i), old_j = m.col(j);
-			m.col(i).noalias() = old_i * vm(0, 0) + old_j * vm(1, 0);
-			m.col(j).noalias() = old_i * vm(0, 1) + old_j * vm(1, 1);
 		}
 		
 		void multiply_T_matrix()
@@ -900,7 +886,7 @@ class fast_update
 		void measure_dynamical_observable(std::vector<std::vector<double>>&
 			dyn_tau, const std::vector<wick_base<dmatrix_t>>& obs)
 		{
-			check_td_gf_stability();
+			//check_td_gf_stability();
 			if (param.use_projector)
 			{
 				buffer_equal_time_gf();
