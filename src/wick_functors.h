@@ -133,7 +133,7 @@ struct wick_epsilon_V
 			double delta_ij = (i == j ? 1. : 0.);
 			for (int t = 0; t < N; ++t)
 			{
-				int i = single_bonds[t].first, j = single_bonds[t].second;
+				int m = single_bonds[t].first, n = single_bonds[t].second;
 				double delta_mm = 1., delta_nn = 1.;
 				double delta_mn = (m == n ? 1. : 0.);
 				ep += (delta_ii - et_gf_t(i, i)) * ((delta_jj - et_gf_t(j, j)) * ((delta_mm - et_gf_0(m, m)) * ((delta_nn - et_gf_0(n, n))) + (delta_mn - et_gf_0(n, m)) * (et_gf_0(m, n))) + (config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * (td_gf(j, m) * ((delta_nn - et_gf_0(n, n))) + (-td_gf(j, n)) * ((delta_mn - et_gf_0(n, m)))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (td_gf(j, m) * (et_gf_0(m, n)) + td_gf(j, n) * ((delta_mm - et_gf_0(m, m)))))
