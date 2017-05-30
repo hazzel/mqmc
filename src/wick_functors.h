@@ -262,7 +262,6 @@ struct wick_chern
 {
 	configuration& config;
 	Random& rng;
-	bond_map& xx;
 
 	wick_chern(configuration& config_, Random& rng_)
 		: config(config_), rng(rng_)
