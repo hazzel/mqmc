@@ -26,8 +26,9 @@ struct wick_M2
 		const matrix_t& td_gf)
 	{
 		numeric_t M2 = 0.;
-		for (int i = 0; i < config.l.n_sites(); ++i)
-			for (int j = 0; j < config.l.n_sites(); ++j)
+		const int N = config.l.n_sites();
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
 			{
 						/*
 				M2 += config.l.parity(i) * config.l.parity(j)
@@ -37,7 +38,7 @@ struct wick_M2
 						*/
 				M2 += td_gf(i, j) * td_gf(i, j);
 			}
-		return std::real(M2) / std::pow(config.l.n_sites(), 2.);
+		return std::real(M2) / std::pow(N, 2.);
 	}
 };
 
@@ -60,13 +61,13 @@ struct wick_kekule
 			&config.l.bonds("kekule_3")};
 		std::array<double, 3> factors = {-1., -1., 2.};
 		
-		for (int i = 0; i < kek_bonds.size(); ++i)
-			for (int j = 0; j < kek_bonds[i]->size(); ++j)
+		const int N = kek_bonds.size(), M = kek_bonds[0]->size();
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < M; ++j)
 			{
 				auto& a = (*kek_bonds[i])[j];
-				if (a.first > a.second) continue;
-				for (int m = 0; m < kek_bonds.size(); ++m)
-					for (int n = 0; n < kek_bonds[m]->size(); ++n)
+				for (int m = 0; m < N; ++m)
+					for (int n = 0; n < M; ++n)
 					{
 						auto& b = (*kek_bonds[m])[n];
 						
@@ -75,7 +76,7 @@ struct wick_kekule
 							+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(a.first, b.first) * td_gf(a.second, b.second));
 					}
 			}
-		return std::real(2.*kek) / std::pow(config.l.n_bonds(), 2.);
+		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
 	}
 };
 
@@ -93,16 +94,20 @@ struct wick_epsilon
 		const matrix_t& td_gf)
 	{
 		numeric_t ep = 0.;
-		for (auto& a : config.l.bonds("nearest neighbors"))
+		auto& single_bonds = config.l.bonds("single_d1_bonds");
+		auto& bonds = config.l.bonds("single_d1_bonds");
+		const int N = single_bonds.size(), M = bonds.size();
+		for (int i = 0; i < N; ++i)
 		{
-			if (a.first > a.second) continue;
-			for (auto& b : config.l.bonds("nearest neighbors"))
+			auto& a = single_bonds[i];
+			for (int j = 0; j < M; ++j)
 			{
+				auto& b = bonds[j];
 				ep += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
 						+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(a.first, b.first) * td_gf(a.second, b.second);
 			}
 		}
-		return std::real(2.*ep) / std::pow(config.l.n_bonds(), 2.);
+		return std::real(2.*ep) / std::pow(M, 2.);
 	}
 };
 
@@ -119,16 +124,16 @@ struct wick_epsilon_V
 		const matrix_t& td_gf)
 	{
 		numeric_t ep = 0.;
-		for (auto& a : config.l.bonds("nearest neighbors"))
+		auto& single_bonds = config.l.bonds("single_d1_bonds");
+		const int N = single_bonds.size();
+		for (int s = 0; s < N; ++s)
 		{
-			int i = a.first, j = a.second;
+			int i = single_bonds[s].first, j = single_bonds[s].second;
 			double delta_ii = 1., delta_jj = 1.;
 			double delta_ij = (i == j ? 1. : 0.);
-			if (i > j) continue;
-			for (auto& b : config.l.bonds("nearest neighbors"))
+			for (int t = 0; t < N; ++t)
 			{
-				int m = b.first, n = b.second;
-				if (m > n) continue;
+				int i = single_bonds[t].first, j = single_bonds[t].second;
 				double delta_mm = 1., delta_nn = 1.;
 				double delta_mn = (m == n ? 1. : 0.);
 				ep += (delta_ii - et_gf_t(i, i)) * ((delta_jj - et_gf_t(j, j)) * ((delta_mm - et_gf_0(m, m)) * ((delta_nn - et_gf_0(n, n))) + (delta_mn - et_gf_0(n, m)) * (et_gf_0(m, n))) + (config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * (td_gf(j, m) * ((delta_nn - et_gf_0(n, n))) + (-td_gf(j, n)) * ((delta_mn - et_gf_0(n, m)))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (td_gf(j, m) * (et_gf_0(m, n)) + td_gf(j, n) * ((delta_mm - et_gf_0(m, m)))))
@@ -158,12 +163,14 @@ struct wick_epsilon_as
 			{&config.l.bonds("nn_bond_1"), &config.l.bonds("nn_bond_2"),
 			&config.l.bonds("nn_bond_3")};
 		
-		for (int i = 0; i < bonds.size(); ++i)
-			for (int j = 0; j < bonds[i]->size(); ++j)
-				for (int m = 0; m < bonds.size(); ++m)
-					for (int n = 0; n < bonds[m]->size(); ++n)
+		const int N = bonds.size(), M = bonds[0]->size();
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < M; ++j)
+			{
+				auto& a = (*bonds[i])[j];
+				for (int m = 0; m < N; ++m)
+					for (int n = 0; n < M; ++n)
 					{
-						auto& a = (*bonds[i])[j];
 						auto& b = (*bonds[m])[n];
 						
 						ep += 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
@@ -180,6 +187,7 @@ struct wick_epsilon_as
 							+ config.l.parity(a.second) * config.l.parity(b.second) * td_gf(a.second, b.second) * td_gf(a.first, b.first);
 						*/
 					}
+			}
 		return std::real(ep) / std::pow(config.l.n_bonds(), 2.);
 	}
 };
@@ -254,6 +262,7 @@ struct wick_chern
 {
 	configuration& config;
 	Random& rng;
+	bond_map& xx;
 
 	wick_chern(configuration& config_, Random& rng_)
 		: config(config_), rng(rng_)
@@ -263,10 +272,14 @@ struct wick_chern
 		const matrix_t& td_gf)
 	{
 		numeric_t ch = 0.;
-		numeric_t ch1 = 0., ch2 = 0., ch3 = 0., ch4 = 0.;
-		for (auto& a : config.l.bonds("chern"))
-			for (auto& b : config.l.bonds("chern"))
+		auto& bonds_c1 = config.l.bonds("chern");
+		auto& bonds_c2 = config.l.bonds("chern_2");
+		const int N = bonds_c1.size();
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
 			{
+				auto& a = bonds_c1[i];
+				auto& b = bonds_c1[j];
 				/*
 				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
@@ -282,9 +295,11 @@ struct wick_chern
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					- td_gf(a.second, b.second) * td_gf(a.first, b.first));
 			}
-		for (auto& a : config.l.bonds("chern_2"))
-			for (auto& b : config.l.bonds("chern"))
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
 			{
+				auto& a = bonds_c2[i];
+				auto& b = bonds_c1[j];
 				/*
 				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
@@ -300,9 +315,11 @@ struct wick_chern
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
 			}
-		for (auto& a : config.l.bonds("chern"))
-			for (auto& b : config.l.bonds("chern_2"))
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
 			{
+				auto& a = bonds_c1[i];
+				auto& b = bonds_c2[j];
 				/*
 				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
@@ -318,9 +335,11 @@ struct wick_chern
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
 			}
-		for (auto& a : config.l.bonds("chern_2"))
-			for (auto& b : config.l.bonds("chern_2"))
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
 			{
+				auto& a = bonds_c2[i];
+				auto& b = bonds_c2[j];
 				/*
 				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
@@ -378,12 +397,14 @@ struct wick_gamma_mod
 			{&config.l.bonds("nn_bond_2"), &config.l.bonds("nn_bond_3")};
 		std::vector<double> phases = {2.*std::sin(2./3. * pi), 2.*std::sin(4./3. * pi)};
 		
-		for (int i = 0; i < bonds.size(); ++i)
-			for (int j = 0; j < bonds[i]->size(); ++j)
-				for (int m = 0; m < bonds.size(); ++m)
-					for (int n = 0; n < bonds[m]->size(); ++n)
+		const int N = bonds.size(), M = bonds[0]->size();
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < M; ++j)
+			{
+				auto& a = (*bonds[i])[j];
+				for (int m = 0; m < N; ++m)
+					for (int n = 0; n < M; ++n)
 					{
-						auto& a = (*bonds[i])[j];
 						auto& b = (*bonds[m])[n];
 						
 						gm += 2.*phases[i] * phases[m]
@@ -404,6 +425,7 @@ struct wick_gamma_mod
 							+ config.l.parity(a.second) * config.l.parity(b.second) * td_gf(a.second, b.second) * td_gf(a.first, b.first));
 						*/
 					}
+			}
 		return std::real(gm) / std::pow(config.l.n_bonds(), 2.);
 	}
 };
@@ -423,10 +445,11 @@ struct wick_sp
 	{
 		numeric_t sp = 0.;
 		auto& K = config.l.symmetry_point("K");
-		for (int i = 0; i < config.l.n_sites(); ++i)
+		const int N = config.l.n_sites();
+		for (int i = 0; i < N; ++i)
 		{
 			auto& r_i = config.l.real_space_coord(i);
-			for (int j = 0; j < config.l.n_sites(); ++j)
+			for (int j = 0; j < N; ++j)
 			{
 				auto& r_j = config.l.real_space_coord(j);
 				double kdot = K.dot(r_i - r_j);

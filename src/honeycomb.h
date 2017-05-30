@@ -136,6 +136,9 @@ struct honeycomb
 		l.generate_bond_map("nearest neighbors", [&]
 			(lattice::vertex_t i, lattice::vertex_t j)
 			{ return l.distance(i, j) == 1; });
+		l.generate_bond_map("single_d1_bonds", [&]
+			(lattice::vertex_t i, lattice::vertex_t j)
+			{ return l.distance(i, j) == 1 && i < j; });
 		l.generate_bond_map("d3_bonds", [&]
 			(lattice::vertex_t i, lattice::vertex_t j)
 			{ return l.distance(i, j) == 3; });
