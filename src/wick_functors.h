@@ -103,6 +103,7 @@ struct wick_epsilon
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
+		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
 		numeric_t ep = 0.;
 		auto& single_bonds = config.l.bonds("single_d1_bonds");
 		auto& bonds = config.l.bonds("single_d1_bonds");
@@ -113,8 +114,12 @@ struct wick_epsilon
 			for (int j = 0; j < M; ++j)
 			{
 				auto& b = bonds[j];
+				/*
 				ep += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
-						+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(a.first, b.first) * td_gf(a.second, b.second);
+					+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(a.first, b.first) * td_gf(a.second, b.second);
+				*/
+				ep += ca_et_gf_t[a.first*N + a.second] * ca_et_gf_0[b.second*N + b.first]
+					+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*N + a.first] * ca_td_gf[b.second*N + a.second];
 			}
 		}
 		return std::real(2.*ep) / std::pow(M, 2.);
@@ -168,6 +173,7 @@ struct wick_epsilon_as
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
+		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
 		numeric_t ep = 0.;
 		std::vector<const std::vector<std::pair<int, int>>*> bonds =
 			{&config.l.bonds("nn_bond_1"), &config.l.bonds("nn_bond_2"),
@@ -183,11 +189,18 @@ struct wick_epsilon_as
 					{
 						auto& b = (*bonds[m])[n];
 						
+						/*
 						ep += 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
 							+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(a.first, b.first) * td_gf(a.second, b.second));
 							
 						ep -= 2.*(et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
 							+ config.l.parity(a.second) * config.l.parity(b.first) * td_gf(a.second, b.first) * td_gf(a.first, b.second));
+						*/
+						ep += 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.second*N+b.first]
+							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*N+a.first] * ca_td_gf[b.second*N+a.second]);
+							
+						ep -= 2.*(ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.second*N+b.first]
+							+ config.l.parity(a.second) * config.l.parity(b.first) * ca_td_gf[b.first*N+a.second] * ca_td_gf[b.second*N+a.first]);
 						
 						/*
 						ep -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
@@ -280,6 +293,7 @@ struct wick_chern
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
+		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
 		numeric_t ch = 0.;
 		auto& bonds_c1 = config.l.bonds("chern");
 		auto& bonds_c2 = config.l.bonds("chern_2");
@@ -299,10 +313,16 @@ struct wick_chern
 					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
 					+ td_gf(a.second, b.first) * td_gf(a.first, b.second);
 				*/
+				/*
 				ch -= 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					- td_gf(a.second, b.second) * td_gf(a.first, b.first));
+				*/
+				ch -= 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.first*N+b.second]
+					+ ca_td_gf[b.second*N+a.first] * ca_td_gf[b.first*N+a.second]
+					- ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.first*N+b.second]
+					- ca_td_gf[b.second*N+a.second] * ca_td_gf[b.first*N+a.first]);
 			}
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < N; ++j)
@@ -319,10 +339,16 @@ struct wick_chern
 					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
 					- td_gf(a.second, b.first) * td_gf(a.first, b.second);
 				*/
+				/*
 				ch += 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
+				*/
+				ch += 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.first*N+b.second]
+					- ca_td_gf[b.second*N+a.first] * ca_td_gf[b.first*N+a.second]
+					- ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.first*N+b.second]
+					+ ca_td_gf[b.second*N+a.second] * ca_td_gf[b.first*N+a.first]);
 			}
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < N; ++j)
@@ -339,10 +365,16 @@ struct wick_chern
 					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
 					- td_gf(a.second, b.first) * td_gf(a.first, b.second);
 				*/
+				/*
 				ch += 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
+				*/
+				ch += 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.first*N+b.second]
+					- ca_td_gf[b.second*N+a.first] * ca_td_gf[b.first*N+a.second]
+					- ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.first*N+b.second]
+					+ ca_td_gf[b.second*N+a.second] * ca_td_gf[b.first*N+a.first]);
 			}
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < N; ++j)
@@ -360,10 +392,16 @@ struct wick_chern
 					+ td_gf(a.second, b.first) * td_gf(a.first, b.second);
 				*/
 				
+				/*
 				ch -= 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					- td_gf(a.second, b.second) * td_gf(a.first, b.first));
+				*/
+				ch -= 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.first*N+b.second]
+					+ ca_td_gf[b.second*N+a.first] * ca_td_gf[b.first*N+a.second]
+					- ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.first*N+b.second]
+					- ca_td_gf[b.second*N+a.second] * ca_td_gf[b.first*N+a.first]);
 			}
 		return std::real(ch) / std::pow(config.l.n_bonds(), 2.);
 	}
@@ -393,6 +431,7 @@ struct wick_gamma_mod
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
+		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
 		numeric_t gm = 0.;
 		double pi = 4. * std::atan(1.);
 		
@@ -416,6 +455,7 @@ struct wick_gamma_mod
 					{
 						auto& b = (*bonds[m])[n];
 						
+						/*
 						gm += 2.*phases[i] * phases[m]
 							* (et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
 							+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(a.first, b.first) * td_gf(a.second, b.second));
@@ -423,6 +463,14 @@ struct wick_gamma_mod
 						gm -= 2.*phases[i] * phases[m]
 							* (et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
 							+ config.l.parity(a.second) * config.l.parity(b.first) * td_gf(a.second, b.first) * td_gf(a.first, b.second));
+						*/
+						gm += 2.*phases[i] * phases[m]
+							* (ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.second*N+b.first]
+							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*N+a.first] * ca_td_gf[b.second*N+a.second]);
+							
+						gm -= 2.*phases[i] * phases[m]
+							* (ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.second*N+b.first]
+							+ config.l.parity(a.second) * config.l.parity(b.first) * ca_td_gf[b.first*N+a.second] * ca_td_gf[b.second*N+a.first]);
 						
 						/*
 						gm -= phases[i] * phases[m]
