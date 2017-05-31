@@ -64,7 +64,7 @@ struct wick_kekule
 			&config.l.bonds("kekule_3")};
 		std::array<double, 3> factors = {-1., -1., 2.};
 		
-		const int N = kek_bonds.size(), M = kek_bonds[0]->size();
+		const int N = kek_bonds.size(), M = kek_bonds[0]->size(), ns = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < M; ++j)
 			{
@@ -81,9 +81,8 @@ struct wick_kekule
 						*/
 						
 						kek += factors[i] * factors[m]
-							* (ca_et_gf_t[a.first*N + a.second] * ca_et_gf_0[b.second*N + b.first]
-							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*N + a.first] * ca_td_gf[b.second*N + a.second]);
-						
+							* (ca_et_gf_t[a.first*ns + a.second] * ca_et_gf_0[b.second*ns + b.first]
+							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*ns + a.first] * ca_td_gf[b.second*ns + a.second]);
 					}
 			}
 		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
@@ -106,23 +105,26 @@ struct wick_epsilon
 		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
 		numeric_t ep = 0.;
 		auto& single_bonds = config.l.bonds("single_d1_bonds");
-		auto& bonds = config.l.bonds("single_d1_bonds");
-		const int N = single_bonds.size(), M = bonds.size();
+		auto& bonds = config.l.bonds("nearest neighbors");
+		const int N = single_bonds.size(), M = bonds.size(), ns = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
 		{
 			auto& a = single_bonds[i];
 			for (int j = 0; j < M; ++j)
 			{
 				auto& b = bonds[j];
+				
 				/*
 				ep += et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
 					+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(a.first, b.first) * td_gf(a.second, b.second);
 				*/
-				ep += ca_et_gf_t[a.first*N + a.second] * ca_et_gf_0[b.second*N + b.first]
-					+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*N + a.first] * ca_td_gf[b.second*N + a.second];
+				
+				ep += ca_et_gf_t[a.first*ns + a.second] * ca_et_gf_0[b.second*ns + b.first]
+					+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*ns + a.first] * ca_td_gf[b.second*ns + a.second];
+				
 			}
 		}
-		return std::real(2.*ep) / std::pow(M, 2.);
+		return std::real(2.*ep) / std::pow(N, 2.);
 	}
 };
 
@@ -138,9 +140,10 @@ struct wick_epsilon_V
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
+		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
 		numeric_t ep = 0.;
 		auto& single_bonds = config.l.bonds("single_d1_bonds");
-		const int N = single_bonds.size();
+		const int N = single_bonds.size(), ns = config.l.n_sites();
 		for (int s = 0; s < N; ++s)
 		{
 			int i = single_bonds[s].first, j = single_bonds[s].second;
@@ -151,10 +154,7 @@ struct wick_epsilon_V
 				int m = single_bonds[t].first, n = single_bonds[t].second;
 				double delta_mm = 1., delta_nn = 1.;
 				double delta_mn = (m == n ? 1. : 0.);
-				ep += (delta_ii - et_gf_t(i, i)) * ((delta_jj - et_gf_t(j, j)) * ((delta_mm - et_gf_0(m, m)) * ((delta_nn - et_gf_0(n, n))) + (delta_mn - et_gf_0(n, m)) * (et_gf_0(m, n))) + (config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * (td_gf(j, m) * ((delta_nn - et_gf_0(n, n))) + (-td_gf(j, n)) * ((delta_mn - et_gf_0(n, m)))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (td_gf(j, m) * (et_gf_0(m, n)) + td_gf(j, n) * ((delta_mm - et_gf_0(m, m)))))
-				+ (delta_ij - et_gf_t(j, i)) * (et_gf_t(i, j) * ((delta_mm - et_gf_0(m, m)) * ((delta_nn - et_gf_0(n, n))) + (delta_mn - et_gf_0(n, m)) * (et_gf_0(m, n))) + (-td_gf(i, m)) * ((config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * ((delta_nn - et_gf_0(n, n))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (et_gf_0(m, n))) + (-td_gf(i, n)) * ((-config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * ((delta_mn - et_gf_0(n, m))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * ((delta_mm - et_gf_0(m, m)))))
-				+ (config.l.parity(i)*config.l.parity(m)*td_gf(m, i)) * (et_gf_t(i, j) * (td_gf(j, m) * ((delta_nn - et_gf_0(n, n))) + (-td_gf(j, n)) * ((delta_mn - et_gf_0(n, m)))) + td_gf(i, m) * ((delta_jj - et_gf_t(j, j)) * ((delta_nn - et_gf_0(n, n))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (td_gf(j, n))) + (-td_gf(i, n)) * ((delta_jj - et_gf_t(j, j)) * ((delta_mn - et_gf_0(n, m))) + (config.l.parity(j)*config.l.parity(n)*td_gf(n, j)) * (td_gf(j, m))))
-				+ (config.l.parity(i)*config.l.parity(n)*td_gf(n, i)) * (et_gf_t(i, j) * (td_gf(j, m) * (et_gf_0(m, n)) + td_gf(j, n) * ((delta_mm - et_gf_0(m, m)))) + td_gf(i, m) * ((delta_jj - et_gf_t(j, j)) * (et_gf_0(m, n)) + (-config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * (td_gf(j, n))) + td_gf(i, n) * ((delta_jj - et_gf_t(j, j)) * ((delta_mm - et_gf_0(m, m))) + (config.l.parity(j)*config.l.parity(m)*td_gf(m, j)) * (td_gf(j, m))));
+				ep += (delta_ii - ca_et_gf_t[i*ns+i]) * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_mm - ca_et_gf_0[m*ns+m]) * ((delta_nn - ca_et_gf_0[n*ns+n])) + (delta_mn - ca_et_gf_0[m*ns+n]) * (ca_et_gf_0[n*ns+m])) + (config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * (ca_td_gf[m*ns+j] * ((delta_nn - ca_et_gf_0[n*ns+n])) + (-ca_td_gf[n*ns+j]) * ((delta_mn - ca_et_gf_0[m*ns+n]))) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_td_gf[m*ns+j] * (ca_et_gf_0[n*ns+m]) + ca_td_gf[n*ns+j] * ((delta_mm - ca_et_gf_0[m*ns+m])))) + (delta_ij - ca_et_gf_t[i*ns+j]) * (ca_et_gf_t[j*ns+i] * ((delta_mm - ca_et_gf_0[m*ns+m]) * ((delta_nn - ca_et_gf_0[n*ns+n])) + (delta_mn - ca_et_gf_0[m*ns+n]) * (ca_et_gf_0[n*ns+m])) + (-ca_td_gf[m*ns+i]) * ((config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * ((delta_nn - ca_et_gf_0[n*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_et_gf_0[n*ns+m])) + (-ca_td_gf[n*ns+i]) * ((-config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * ((delta_mn - ca_et_gf_0[m*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * ((delta_mm - ca_et_gf_0[m*ns+m])))) + (config.l.parity(i)*config.l.parity(m)*ca_td_gf[i*ns+m]) * (ca_et_gf_t[j*ns+i] * (ca_td_gf[m*ns+j] * ((delta_nn - ca_et_gf_0[n*ns+n])) + (-ca_td_gf[n*ns+j]) * ((delta_mn - ca_et_gf_0[m*ns+n]))) + ca_td_gf[m*ns+i] * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_nn - ca_et_gf_0[n*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_td_gf[n*ns+j])) + (-ca_td_gf[n*ns+i]) * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_mn - ca_et_gf_0[m*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_td_gf[m*ns+j]))) + (config.l.parity(i)*config.l.parity(n)*ca_td_gf[i*ns+n]) * (ca_et_gf_t[j*ns+i] * (ca_td_gf[m*ns+j] * (ca_et_gf_0[n*ns+m]) + ca_td_gf[n*ns+j] * ((delta_mm - ca_et_gf_0[m*ns+m]))) + ca_td_gf[m*ns+i] * ((delta_jj - ca_et_gf_t[j*ns+j]) * (ca_et_gf_0[n*ns+m]) + (-config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * (ca_td_gf[n*ns+j])) + ca_td_gf[n*ns+i] * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_mm - ca_et_gf_0[m*ns+m])) + (config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * (ca_td_gf[m*ns+j])));
 			}
 		}
 		return std::real(ep) / std::pow(config.l.n_bonds(), 2.);
@@ -179,7 +179,7 @@ struct wick_epsilon_as
 			{&config.l.bonds("nn_bond_1"), &config.l.bonds("nn_bond_2"),
 			&config.l.bonds("nn_bond_3")};
 		
-		const int N = bonds.size(), M = bonds[0]->size();
+		const int N = bonds.size(), M = bonds[0]->size(), ns = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < M; ++j)
 			{
@@ -196,11 +196,11 @@ struct wick_epsilon_as
 						ep -= 2.*(et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
 							+ config.l.parity(a.second) * config.l.parity(b.first) * td_gf(a.second, b.first) * td_gf(a.first, b.second));
 						*/
-						ep += 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.second*N+b.first]
-							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*N+a.first] * ca_td_gf[b.second*N+a.second]);
+						ep += 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.second*ns+b.first]
+							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*ns+a.first] * ca_td_gf[b.second*ns+a.second]);
 							
-						ep -= 2.*(ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.second*N+b.first]
-							+ config.l.parity(a.second) * config.l.parity(b.first) * ca_td_gf[b.first*N+a.second] * ca_td_gf[b.second*N+a.first]);
+						ep -= 2.*(ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.second*ns+b.first]
+							+ config.l.parity(a.second) * config.l.parity(b.first) * ca_td_gf[b.first*ns+a.second] * ca_td_gf[b.second*ns+a.first]);
 						
 						/*
 						ep -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
@@ -297,7 +297,7 @@ struct wick_chern
 		numeric_t ch = 0.;
 		auto& bonds_c1 = config.l.bonds("chern");
 		auto& bonds_c2 = config.l.bonds("chern_2");
-		const int N = bonds_c1.size();
+		const int N = bonds_c1.size(), ns = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < N; ++j)
 			{
@@ -319,10 +319,10 @@ struct wick_chern
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					- td_gf(a.second, b.second) * td_gf(a.first, b.first));
 				*/
-				ch -= 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.first*N+b.second]
-					+ ca_td_gf[b.second*N+a.first] * ca_td_gf[b.first*N+a.second]
-					- ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.first*N+b.second]
-					- ca_td_gf[b.second*N+a.second] * ca_td_gf[b.first*N+a.first]);
+				ch -= 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
+					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
 			}
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < N; ++j)
@@ -345,10 +345,10 @@ struct wick_chern
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
 				*/
-				ch += 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.first*N+b.second]
-					- ca_td_gf[b.second*N+a.first] * ca_td_gf[b.first*N+a.second]
-					- ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.first*N+b.second]
-					+ ca_td_gf[b.second*N+a.second] * ca_td_gf[b.first*N+a.first]);
+				ch += 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
+					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
 			}
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < N; ++j)
@@ -371,10 +371,10 @@ struct wick_chern
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
 				*/
-				ch += 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.first*N+b.second]
-					- ca_td_gf[b.second*N+a.first] * ca_td_gf[b.first*N+a.second]
-					- ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.first*N+b.second]
-					+ ca_td_gf[b.second*N+a.second] * ca_td_gf[b.first*N+a.first]);
+				ch += 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
+					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
 			}
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < N; ++j)
@@ -398,10 +398,10 @@ struct wick_chern
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					- td_gf(a.second, b.second) * td_gf(a.first, b.first));
 				*/
-				ch -= 2.*(ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.first*N+b.second]
-					+ ca_td_gf[b.second*N+a.first] * ca_td_gf[b.first*N+a.second]
-					- ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.first*N+b.second]
-					- ca_td_gf[b.second*N+a.second] * ca_td_gf[b.first*N+a.first]);
+				ch -= 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
+					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
 			}
 		return std::real(ch) / std::pow(config.l.n_bonds(), 2.);
 	}
@@ -445,7 +445,7 @@ struct wick_gamma_mod
 			{&config.l.bonds("nn_bond_2"), &config.l.bonds("nn_bond_3")};
 		std::vector<double> phases = {2.*std::sin(2./3. * pi), 2.*std::sin(4./3. * pi)};
 		
-		const int N = bonds.size(), M = bonds[0]->size();
+		const int N = bonds.size(), M = bonds[0]->size(), ns = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < M; ++j)
 			{
@@ -465,12 +465,12 @@ struct wick_gamma_mod
 							+ config.l.parity(a.second) * config.l.parity(b.first) * td_gf(a.second, b.first) * td_gf(a.first, b.second));
 						*/
 						gm += 2.*phases[i] * phases[m]
-							* (ca_et_gf_t[a.first*N+a.second] * ca_et_gf_0[b.second*N+b.first]
-							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*N+a.first] * ca_td_gf[b.second*N+a.second]);
+							* (ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.second*ns+b.first]
+							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*ns+a.first] * ca_td_gf[b.second*ns+a.second]);
 							
 						gm -= 2.*phases[i] * phases[m]
-							* (ca_et_gf_t[a.second*N+a.first] * ca_et_gf_0[b.second*N+b.first]
-							+ config.l.parity(a.second) * config.l.parity(b.first) * ca_td_gf[b.first*N+a.second] * ca_td_gf[b.second*N+a.first]);
+							* (ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.second*ns+b.first]
+							+ config.l.parity(a.second) * config.l.parity(b.first) * ca_td_gf[b.first*ns+a.second] * ca_td_gf[b.second*ns+a.first]);
 						
 						/*
 						gm -= phases[i] * phases[m]
