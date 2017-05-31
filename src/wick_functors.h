@@ -25,6 +25,7 @@ struct wick_M2
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
+		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
 		numeric_t M2 = 0.;
 		const int N = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
@@ -36,7 +37,8 @@ struct wick_M2
 					+ config.l.parity(i) * config.l.parity(j) * td_gf(i, j) * td_gf(i, j)
 					- (et_gf_t(i, i) + et_gf_0(j, j))/2. + 1./4.);
 						*/
-				M2 += td_gf(i, j) * td_gf(i, j);
+				//M2 += td_gf(i, j) * td_gf(i, j);
+				M2 += ca_td_gf[j * N + i] * ca_td_gf[j * N + i];
 			}
 		return std::real(M2) / std::pow(N, 2.);
 	}
@@ -55,6 +57,7 @@ struct wick_kekule
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
+		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
 		numeric_t kek = 0.;
 		std::array<const std::vector<std::pair<int, int>>*, 3> kek_bonds =
 			{&config.l.bonds("kekule"), &config.l.bonds("kekule_2"),
@@ -71,9 +74,16 @@ struct wick_kekule
 					{
 						auto& b = (*kek_bonds[m])[n];
 						
+						/*
 						kek += factors[i] * factors[m]
 							* (et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
 							+ config.l.parity(a.first) * config.l.parity(b.first) * td_gf(a.first, b.first) * td_gf(a.second, b.second));
+						*/
+						
+						kek += factors[i] * factors[m]
+							* (ca_et_gf_t[a.first*N + a.second] * ca_et_gf_0[b.second*N + b.first]
+							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*N + a.first] * ca_td_gf[b.second*N + a.second]);
+						
 					}
 			}
 		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
