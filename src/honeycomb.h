@@ -279,6 +279,30 @@ struct honeycomb
 				}
 		});
 		
+		l.generate_bond_map("single_kekule", [&]
+			(lattice::pair_vector_t& list)
+		{
+			for (auto& bond : l.bonds("kekule"))
+				if (bond.first < bond.second)
+					list.push_back(bond);
+		});
+		
+		l.generate_bond_map("single_kekule_2", [&]
+			(lattice::pair_vector_t& list)
+		{
+			for (auto& bond : l.bonds("kekule_2"))
+				if (bond.first < bond.second)
+					list.push_back(bond);
+		});
+		
+		l.generate_bond_map("single_kekule_3", [&]
+			(lattice::pair_vector_t& list)
+		{
+			for (auto& bond : l.bonds("kekule_3"))
+				if (bond.first < bond.second)
+					list.push_back(bond);
+		});
+		
 		l.generate_bond_map("chern", [&]
 		(lattice::pair_vector_t& list)
 		{

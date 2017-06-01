@@ -608,10 +608,10 @@ class fast_update
 		{
 			dmatrix_t old_m = m;
 			int as = alpha * l.n_sites(), bs = beta * l.n_sites();
-			for (int i = 0; i < l.n_sites(); ++i)
+			int N = nn_bonds[bond_type].size();
+			for (int b = 0; b < N; ++b)
 			{
-				int j = cb_bonds[bond_type][i];
-				if (i > j) continue;
+				int i = nn_bonds[bond_type][b].first, j = nn_bonds[bond_type][b].second;
 				double sigma = vertex.get(bond_index(i, j));
 				dmatrix_t* vm;
 				if(inv == 1)
@@ -628,10 +628,10 @@ class fast_update
 		{
 			dmatrix_t old_m = m;
 			int as = alpha * l.n_sites(), bs = beta * l.n_sites();
-			for (int i = 0; i < l.n_sites(); ++i)
+			int N = nn_bonds[bond_type].size();
+			for (int b = 0; b < N; ++b)
 			{
-				int j = cb_bonds[bond_type][i];
-				if (i > j) continue;
+				int i = nn_bonds[bond_type][b].first, j = nn_bonds[bond_type][b].second;
 				double sigma = vertex.get(bond_index(i, j));
 				dmatrix_t* vm;
 				if(inv == 1)
@@ -779,7 +779,6 @@ class fast_update
 				dmatrix_t b_l(P.cols(), n_vertex_size);
 				b_l.col(0) = proj_W_l.col(m);
 				b_l.col(1) = proj_W_l.col(n);
-				int ns = l.n_sites();
 				W_W_l.noalias() = proj_W * b_l;
 				dmatrix_t b_r(n_vertex_size, P.cols());
 				b_r.row(0) = proj_W_r.row(m);
@@ -868,7 +867,11 @@ class fast_update
 			const std::vector<wick_static_base<dmatrix_t>>& obs)
 		{
 			if (param.use_projector)
-				equal_time_gf = id - proj_W_r * proj_W * proj_W_l;
+			{
+				dmatrix_t wl = proj_W * proj_W_l;
+				equal_time_gf = id;
+				equal_time_gf.noalias() -= proj_W_r * wl;
+			}
 			for (int i = 0; i < values.size(); ++i)
 					values[i] = obs[i].get_obs(equal_time_gf);
 
@@ -912,8 +915,9 @@ class fast_update
 						else
 							stabilize_forward();
 					}
+					dmatrix_t wl = proj_W * proj_W_l;
 					et_gf_L[n] = id;
-					et_gf_L[n].noalias() -= proj_W_r * proj_W * proj_W_l;
+					et_gf_L[n].noalias() -= proj_W_r * wl;
 					td_gf[n] = et_gf_L[n];
 				}
 				dmatrix_t& et_gf_0 = et_gf_L[param.n_discrete_tau - 1];
@@ -927,8 +931,9 @@ class fast_update
 						else
 							stabilize_forward();
 					}
+					dmatrix_t wl = proj_W * proj_W_l;
 					et_gf_R[n] = id;
-					et_gf_R[n].noalias() -= proj_W_r * proj_W * proj_W_l;
+					et_gf_R[n].noalias() -= proj_W_r * wl;
 					if (n < param.n_discrete_tau)
 						td_gf[n+param.n_discrete_tau] = et_gf_R[n];
 				}

@@ -59,18 +59,21 @@ struct wick_kekule
 	{
 		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
 		numeric_t kek = 0.;
+		std::array<const std::vector<std::pair<int, int>>*, 3> single_kek_bonds =
+			{&config.l.bonds("single_kekule"), &config.l.bonds("single_kekule_2"),
+			&config.l.bonds("single_kekule_3")};
 		std::array<const std::vector<std::pair<int, int>>*, 3> kek_bonds =
 			{&config.l.bonds("kekule"), &config.l.bonds("kekule_2"),
 			&config.l.bonds("kekule_3")};
 		std::array<double, 3> factors = {-1., -1., 2.};
 		
-		const int N = kek_bonds.size(), M = kek_bonds[0]->size(), ns = config.l.n_sites();
+		const int N = kek_bonds.size(), M = single_kek_bonds[0]->size(), O = kek_bonds[0]->size(), ns = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
 			for (int j = 0; j < M; ++j)
 			{
-				auto& a = (*kek_bonds[i])[j];
+				auto& a = (*single_kek_bonds[i])[j];
 				for (int m = 0; m < N; ++m)
-					for (int n = 0; n < M; ++n)
+					for (int n = 0; n < O; ++n)
 					{
 						auto& b = (*kek_bonds[m])[n];
 						
@@ -85,7 +88,7 @@ struct wick_kekule
 							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_td_gf[b.first*ns + a.first] * ca_td_gf[b.second*ns + a.second]);
 					}
 			}
-		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
+		return std::real(2.*kek) / std::pow(config.l.n_bonds(), 2.);
 	}
 };
 
