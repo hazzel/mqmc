@@ -135,18 +135,42 @@ struct wick_epsilon_V
 {
 	configuration& config;
 	Random& rng;
+	const numeric_t* ca_et_gf_0;
+	const numeric_t* ca_et_gf_t;
+	const numeric_t* ca_td_gf;
 
 	wick_epsilon_V(configuration& config_, Random& rng_)
 		: config(config_), rng(rng_)
 	{}
 	
+	numeric_t evaluate(Eigen::Matrix<numeric_t, 4, 4>& mat44, int ns, int i, int j, int k, int l)
+	{
+		mat44(0, 1) = ca_et_gf_t[j*ns+i];
+		mat44(1, 0) = -config.l.parity(i) * config.l.parity(j) * ca_et_gf_t[j*ns+i];
+		mat44(0, 2) = ca_td_gf[k*ns+i];
+		mat44(2, 0) = -config.l.parity(i) * config.l.parity(k) * ca_td_gf[k*ns+i];
+		mat44(0, 3) = ca_td_gf[l*ns+i];
+		mat44(3, 0) = -config.l.parity(i) * config.l.parity(l) * ca_td_gf[k*ns+j];
+		mat44(1, 2) = ca_td_gf[k*ns+j];
+		mat44(2, 1) = -config.l.parity(j) * config.l.parity(k) * ca_td_gf[l*ns+i];
+		mat44(1, 3) = ca_td_gf[l*ns+j];
+		mat44(3, 1) = -config.l.parity(j) * config.l.parity(l) * ca_td_gf[l*ns+j];
+		mat44(2, 3) = ca_et_gf_0[l*ns+k];
+		mat44(3, 2) = -config.l.parity(k) * config.l.parity(l) * ca_et_gf_0[l*ns+k];
+		
+		return mat44.determinant();
+	}
+	
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
-		const numeric_t *ca_et_gf_0 = et_gf_0.data(), *ca_et_gf_t = et_gf_t.data(), *ca_td_gf = td_gf.data();
+		ca_et_gf_0 = et_gf_0.data();
+		ca_et_gf_t = et_gf_t.data();
+		ca_td_gf = td_gf.data();
 		numeric_t ep = 0.;
 		auto& single_bonds = config.l.bonds("single_d1_bonds");
 		const int N = single_bonds.size(), ns = config.l.n_sites();
+		/*
 		for (int s = 0; s < N; ++s)
 		{
 			int i = single_bonds[s].first, j = single_bonds[s].second;
@@ -163,6 +187,18 @@ struct wick_epsilon_V
 				ep += (config.l.parity(i)*config.l.parity(m)*ca_td_gf[i*ns+m]) * (ca_et_gf_t[j*ns+i] * (ca_td_gf[m*ns+j] * ((delta_nn - ca_et_gf_0[n*ns+n])) + (-ca_td_gf[n*ns+j]) * ((delta_mn - ca_et_gf_0[m*ns+n]))) + ca_td_gf[m*ns+i] * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_nn - ca_et_gf_0[n*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_td_gf[n*ns+j])) + (-ca_td_gf[n*ns+i]) * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_mn - ca_et_gf_0[m*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_td_gf[m*ns+j])));
 				ep += (config.l.parity(i)*config.l.parity(n)*ca_td_gf[i*ns+n]) * (ca_et_gf_t[j*ns+i] * (ca_td_gf[m*ns+j] * (ca_et_gf_0[n*ns+m]) + ca_td_gf[n*ns+j] * ((delta_mm - ca_et_gf_0[m*ns+m]))) + ca_td_gf[m*ns+i] * ((delta_jj - ca_et_gf_t[j*ns+j]) * (ca_et_gf_0[n*ns+m]) + (-config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * (ca_td_gf[n*ns+j])) + ca_td_gf[n*ns+i] * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_mm - ca_et_gf_0[m*ns+m])) + (config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * (ca_td_gf[m*ns+j])));
 			}
+			*/
+		
+			Eigen::Matrix<numeric_t, 4, 4> mat44 = Eigen::Matrix<numeric_t, 4, 4>::Zero();
+			for (int s = 0; s < N; ++s)
+			{
+				int i = single_bonds[s].first, j = single_bonds[s].second;
+				#pragma distribute_point
+				for (int t = 0; t < N; ++t)
+				{
+					int m = single_bonds[t].first, n = single_bonds[t].second;
+					ep += evaluate(mat44, ns, i, j, m, n);
+				}
 		}
 		return std::real(ep) / std::pow(config.l.n_bonds(), 2.);
 	}
