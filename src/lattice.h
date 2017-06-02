@@ -139,12 +139,12 @@ class lattice
 		}
 
 		//TODO: generalize as vertex property on graph
-		int sublattice(vertex_t site) const
+		inline int sublattice(vertex_t site) const
 		{
 			return site % 2;
 		}
 
-		double parity(vertex_t site) const
+		inline double parity(vertex_t site) const
 		{
 			return (site % 2 == 0) ? 1.0 : -1.0;
 		}

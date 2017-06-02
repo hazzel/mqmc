@@ -634,23 +634,36 @@ struct wick_static_kek
 	
 	double get_obs(const matrix_t& et_gf)
 	{
+		const numeric_t *ca_et_gf = et_gf.data();
 		numeric_t kek = 0.;
+		std::array<const std::vector<std::pair<int, int>>*, 3> single_kek_bonds =
+			{&config.l.bonds("single_kekule"), &config.l.bonds("single_kekule_2"),
+			&config.l.bonds("single_kekule_3")};
 		std::array<const std::vector<std::pair<int, int>>*, 3> kek_bonds =
 			{&config.l.bonds("kekule"), &config.l.bonds("kekule_2"),
 			&config.l.bonds("kekule_3")};
 		std::array<double, 3> factors = {-1., -1., 2.};
-		for (int i = 0; i < kek_bonds.size(); ++i)
-			for (int m = 0; m < kek_bonds.size(); ++m)
-				for (int j = 0; j < kek_bonds[i]->size(); ++j)
-					for (int n = 0; n < kek_bonds[m]->size(); ++n)
+		const int N = kek_bonds.size(), M = single_kek_bonds[0]->size(), O = kek_bonds[0]->size(), ns = config.l.n_sites();
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < M; ++j)
+			{
+				auto& a = (*single_kek_bonds[i])[j];
+				for (int m = 0; m < N; ++m)
+					for (int n = 0; n < O; ++n)
 					{
-						auto& a = (*kek_bonds[i])[j];
 						auto& b = (*kek_bonds[m])[n];
 						
+						/*
 						kek += factors[i] * factors[m]
 								* (et_gf(a.second, a.first) * et_gf(b.first, b.second)
 								+ config.l.parity(a.first) * config.l.parity(b.first) * et_gf(a.first, b.first) * et_gf(a.second, b.second));
+						*/
+								
+						kek += factors[i] * factors[m]
+							* (ca_et_gf[a.first*ns + a.second] * ca_et_gf[b.second*ns + b.first]
+							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_et_gf[b.first*ns + a.first] * ca_et_gf[b.second*ns + a.second]);
 					}
+			}
 		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
 	}
 };

@@ -608,18 +608,28 @@ class fast_update
 		{
 			dmatrix_t old_m = m;
 			int as = alpha * l.n_sites(), bs = beta * l.n_sites();
-			int N = nn_bonds[bond_type].size();
-			for (int b = 0; b < N; ++b)
+			const int N = nn_bonds[bond_type].size();
+			if (inv == 1)
 			{
-				int i = nn_bonds[bond_type][b].first, j = nn_bonds[bond_type][b].second;
-				double sigma = vertex.get(bond_index(i, j));
-				dmatrix_t* vm;
-				if(inv == 1)
-					vm = &get_vertex_matrix(i, j, alpha, beta, sigma);
-				else
-					vm = &get_inv_vertex_matrix(i, j, alpha, beta, sigma);
-				m.row(i+as).noalias() = old_m.row(i+as) * (*vm)(0, 0) + old_m.row(j+bs) * (*vm)(0, 1);
-				m.row(j+as).noalias() = old_m.row(i+as) * (*vm)(1, 0) + old_m.row(j+bs) * (*vm)(1, 1);
+				for (int b = 0; b < N; ++b)
+				{
+					int i = nn_bonds[bond_type][b].first, j = nn_bonds[bond_type][b].second;
+					double sigma = vertex.get(bond_index(i, j));
+					dmatrix_t& vm = get_vertex_matrix(i, j, alpha, beta, sigma);
+					m.row(i+as).noalias() = old_m.row(i+as) * vm(0, 0) + old_m.row(j+bs) * vm(0, 1);
+					m.row(j+as).noalias() = old_m.row(i+as) * vm(1, 0) + old_m.row(j+bs) * vm(1, 1);
+				}
+			}
+			else
+			{
+				for (int b = 0; b < N; ++b)
+				{
+					int i = nn_bonds[bond_type][b].first, j = nn_bonds[bond_type][b].second;
+					double sigma = vertex.get(bond_index(i, j));
+					dmatrix_t& vm = get_inv_vertex_matrix(i, j, alpha, beta, sigma);
+					m.row(i+as).noalias() = old_m.row(i+as) * vm(0, 0) + old_m.row(j+bs) * vm(0, 1);
+					m.row(j+as).noalias() = old_m.row(i+as) * vm(1, 0) + old_m.row(j+bs) * vm(1, 1);
+				}
 			}
 		}
 
@@ -628,20 +638,32 @@ class fast_update
 		{
 			dmatrix_t old_m = m;
 			int as = alpha * l.n_sites(), bs = beta * l.n_sites();
-			int N = nn_bonds[bond_type].size();
-			for (int b = 0; b < N; ++b)
+			const int N = nn_bonds[bond_type].size();
+			if (inv == 1)
 			{
-				int i = nn_bonds[bond_type][b].first, j = nn_bonds[bond_type][b].second;
-				double sigma = vertex.get(bond_index(i, j));
-				dmatrix_t* vm;
-				if(inv == 1)
-					vm = &get_vertex_matrix(i, j, alpha, beta, sigma);
-				else
-					vm = &get_inv_vertex_matrix(i, j, alpha, beta, sigma);
-				m.col(i+bs).noalias() = old_m.col(i+as) * (*vm)(0, 0)
-					+ old_m.col(j+bs) * (*vm)(1, 0);
-				m.col(j+bs).noalias() = old_m.col(i+as) * (*vm)(0, 1)
-					+ old_m.col(j+bs) * (*vm)(1, 1);
+				for (int b = 0; b < N; ++b)
+				{
+					int i = nn_bonds[bond_type][b].first, j = nn_bonds[bond_type][b].second;
+					double sigma = vertex.get(bond_index(i, j));
+					dmatrix_t& vm = get_vertex_matrix(i, j, alpha, beta, sigma);
+					m.col(i+bs).noalias() = old_m.col(i+as) * vm(0, 0)
+						+ old_m.col(j+bs) * vm(1, 0);
+					m.col(j+bs).noalias() = old_m.col(i+as) * vm(0, 1)
+						+ old_m.col(j+bs) * vm(1, 1);
+				}
+			}
+			else
+			{
+				for (int b = 0; b < N; ++b)
+				{
+					int i = nn_bonds[bond_type][b].first, j = nn_bonds[bond_type][b].second;
+					double sigma = vertex.get(bond_index(i, j));
+					dmatrix_t& vm = get_inv_vertex_matrix(i, j, alpha, beta, sigma);
+					m.col(i+bs).noalias() = old_m.col(i+as) * vm(0, 0)
+						+ old_m.col(j+bs) * vm(1, 0);
+					m.col(j+bs).noalias() = old_m.col(i+as) * vm(0, 1)
+						+ old_m.col(j+bs) * vm(1, 1);
+				}
 			}
 		}
 		
