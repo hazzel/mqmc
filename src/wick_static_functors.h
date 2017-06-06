@@ -115,6 +115,24 @@ struct wick_static_epsilon
 	}
 };
 
+struct wick_static_epsilon_V
+{
+	configuration& config;
+	Random& rng;
+
+	wick_static_epsilon_V(configuration& config_, Random& rng_)
+		: config(config_), rng(rng_)
+	{}
+	
+	double get_obs(const matrix_t& et_gf)
+	{
+		numeric_t epsilon = 0.;
+		for (auto& a : config.l.bonds("single_d1_bonds"))
+			epsilon -= std::real(et_gf(a.first, a.second) * et_gf(a.first, a.second));
+		return std::real(epsilon) / config.l.n_bonds();
+	}
+};
+
 struct wick_static_chern2
 {
 	configuration& config;
@@ -588,17 +606,16 @@ struct wick_static_M4
 		double delta_lk = (l==k) ? 1.0 : 0.0;
 					
 		mat44(0, 1) = et_gf(i, j);
-		mat44(0, 2) = et_gf(i, k);
-		mat44(0, 3) = et_gf(i, l);
-		mat44(1, 2) = et_gf(j, k);
-		mat44(1, 3) = et_gf(j, l);
-		mat44(2, 3) = et_gf(k, l);
-		
 		mat44(1, 0) = et_gf(j, i) - delta_ij;
+		mat44(0, 2) = et_gf(i, k);
 		mat44(2, 0) = et_gf(k, i) - delta_ki;
-		mat44(2, 1) = et_gf(k, j) - delta_kj;
+		mat44(0, 3) = et_gf(i, l);
 		mat44(3, 0) = et_gf(l, i) - delta_li;
+		mat44(1, 2) = et_gf(j, k);
+		mat44(2, 1) = et_gf(k, j) - delta_kj;
+		mat44(1, 3) = et_gf(j, l);
 		mat44(3, 1) = et_gf(l, j) - delta_lj;
+		mat44(2, 3) = et_gf(k, l);
 		mat44(3, 2) = et_gf(l, k) - delta_lk;
 		
 		return std::real(mat44.determinant());
@@ -607,7 +624,7 @@ struct wick_static_M4
 	double get_obs(const matrix_t& et_gf)
 	{
 		double M4 = 0.;
-		int n = config.l.n_sites();
+		const int n = config.l.n_sites();
 		Eigen::Matrix<numeric_t, 4, 4> mat44 = Eigen::Matrix<numeric_t, 4, 4>::Zero();
 		
 		M4 += evaluate(mat44, et_gf, 0, 0, 0, 0) * (3.*n*n - 2.*n);

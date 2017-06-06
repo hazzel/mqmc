@@ -168,6 +168,8 @@ struct event_static_measurement
 				add_wick(wick_static_M4{config, rng});
 			else if (observables[i] == "epsilon")
 				add_wick(wick_static_epsilon{config, rng});
+			else if (observables[i] == "epsilon_V")
+				add_wick(wick_static_epsilon_V{config, rng});
 			else if (observables[i] == "kekule")
 				add_wick(wick_static_kek{config, rng});
 			else if (observables[i] == "chern2")
