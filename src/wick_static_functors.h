@@ -541,16 +541,13 @@ struct wick_static_M2
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		double M2 = 0.;
-		for (int i = 0; i < config.l.n_sites(); ++i)
-			for (int j = 0; j < config.l.n_sites(); ++j)
-			{
-				M2 += config.l.parity(i) * config.l.parity(j)
-					* std::real(((1. - et_gf(i, i)) * (1. - et_gf(j, j))
-					+ config.l.parity(i) * config.l.parity(j) * et_gf(i, j) * et_gf(i, j)
-					- (et_gf(i, i) + et_gf(j, j))/2. + 1./4.));
-			}
-		return M2 / std::pow(config.l.n_sites(), 2.);
+		const numeric_t *ca_et_gf_0 = et_gf.data();
+		numeric_t M2 = 0.;
+		const int N = config.l.n_sites();
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
+				M2 += ca_et_gf_0[j * N + i] * ca_et_gf_0[j * N + i];
+		return std::real(M2) / std::pow(config.l.n_sites(), 2.);
 	}
 };
 
@@ -566,20 +563,18 @@ struct wick_static_S_cdw_q
 	
 	double get_obs(const matrix_t& et_gf)
 	{
+		const numeric_t *ca_et_gf_0 = et_gf.data();
 		numeric_t S = 0.;
 		auto& q = config.l.symmetry_point("q");
-		for (int i = 0; i < config.l.n_sites(); ++i)
+		const int N = config.l.n_sites();
+		for (int i = 0; i < N; ++i)
 		{
 			auto& r_i = config.l.real_space_coord(i);
-			for (int j = 0; j < config.l.n_sites(); ++j)
+			for (int j = 0; j < N; ++j)
 			{
 				auto& r_j = config.l.real_space_coord(j);
-				auto& q = config.l.symmetry_point("q");
 				double qr = q.dot(r_i - r_j);
-				S += config.l.parity(i) * config.l.parity(j)
-					* ((1. - et_gf(i, i)) * (1. - et_gf(j, j))
-					+ config.l.parity(i) * config.l.parity(j) * et_gf(i, j) * et_gf(i, j)
-					- (et_gf(i, i) + et_gf(j, j))/2. + 1./4.) * std::cos(qr);
+				S += ca_et_gf_0[j * N + i] * ca_et_gf_0[j * N + i] * std::cos(qr);
 			}
 		}
 		return std::real(S) / std::pow(config.l.n_sites(), 2.);
@@ -591,52 +586,48 @@ struct wick_static_M4
 {
 	configuration& config;
 	Random& rng;
+	const numeric_t* ca_et_gf_0;
 
 	wick_static_M4(configuration& config_, Random& rng_)
 		: config(config_), rng(rng_)
 	{}
 	
-	double evaluate(Eigen::Matrix<numeric_t, 4, 4>& mat44, const matrix_t& et_gf, int i, int j, int k, int l)
+	numeric_t evaluate(Eigen::Matrix<numeric_t, 4, 4>& mat44, int ns, int i, int j, int k, int l)
 	{
-		double delta_ij = (i==j) ? 1.0 : 0.0;
-		double delta_ki = (k==i) ? 1.0 : 0.0;
-		double delta_kj = (k==j) ? 1.0 : 0.0;
-		double delta_li = (l==i) ? 1.0 : 0.0;
-		double delta_lj = (l==j) ? 1.0 : 0.0;
-		double delta_lk = (l==k) ? 1.0 : 0.0;
-					
-		mat44(0, 1) = et_gf(i, j);
-		mat44(1, 0) = et_gf(j, i) - delta_ij;
-		mat44(0, 2) = et_gf(i, k);
-		mat44(2, 0) = et_gf(k, i) - delta_ki;
-		mat44(0, 3) = et_gf(i, l);
-		mat44(3, 0) = et_gf(l, i) - delta_li;
-		mat44(1, 2) = et_gf(j, k);
-		mat44(2, 1) = et_gf(k, j) - delta_kj;
-		mat44(1, 3) = et_gf(j, l);
-		mat44(3, 1) = et_gf(l, j) - delta_lj;
-		mat44(2, 3) = et_gf(k, l);
-		mat44(3, 2) = et_gf(l, k) - delta_lk;
+		const double pi = config.l.parity(i), pj = config.l.parity(j), pk = config.l.parity(k), pl = config.l.parity(l);
+		mat44(0, 1) = ca_et_gf_0[j*ns+i];
+		mat44(1, 0) = -pi * pj * ca_et_gf_0[j*ns+i];
+		mat44(0, 2) = ca_et_gf_0[k*ns+i];
+		mat44(2, 0) = -pi * pk * ca_et_gf_0[k*ns+i];
+		mat44(0, 3) = ca_et_gf_0[l*ns+i];
+		mat44(3, 0) = -pi * pl * ca_et_gf_0[l*ns+i];
+		mat44(1, 2) = ca_et_gf_0[k*ns+j];
+		mat44(2, 1) = -pj * pk * ca_et_gf_0[k*ns+j];
+		mat44(1, 3) = ca_et_gf_0[l*ns+j];
+		mat44(3, 1) = -pj * pl * ca_et_gf_0[l*ns+j];
+		mat44(2, 3) = ca_et_gf_0[l*ns+k];
+		mat44(3, 2) = -pk * pl * ca_et_gf_0[l*ns+k];
 		
-		return std::real(mat44.determinant());
+		return pi * pj * pk * pl * mat44.determinant();
 	}
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		double M4 = 0.;
+		ca_et_gf_0 = et_gf.data();
+		numeric_t M4 = 0.;
 		const int n = config.l.n_sites();
 		Eigen::Matrix<numeric_t, 4, 4> mat44 = Eigen::Matrix<numeric_t, 4, 4>::Zero();
 		
-		M4 += evaluate(mat44, et_gf, 0, 0, 0, 0) * (3.*n*n - 2.*n);
+		M4 += evaluate(mat44, n, 0, 0, 0, 0) * (3.*n*n - 2.*n);
 		for (int i = 0; i < n; ++i)
 			for (int j = i+1; j < n; ++j)
-			{
-				M4 += evaluate(mat44, et_gf, 0, 0, i, j) * (12.*n - 16.);
+				M4 += evaluate(mat44, n, 0, 0, i, j) * (12.*n - 16.);
+		for (int i = 0; i < n; ++i)
+			for (int j = i+1; j < n; ++j)
 				for (int k = j+1; k < n; ++k)
 					for (int l = k+1; l < n; ++l)
-						M4 += evaluate(mat44, et_gf, i, j, k, l) * 24.;
-			}
-		return M4 / std::pow(config.l.n_sites(), 4.);
+						M4 += evaluate(mat44, n, i, j, k, l) * 24.;
+		return std::real(M4) / std::pow(config.l.n_sites(), 4.);
 	}
 };
 

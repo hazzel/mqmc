@@ -146,24 +146,30 @@ struct wick_epsilon_V
 	numeric_t evaluate(Eigen::Matrix<numeric_t, 4, 4>& mat44, int ns, int i, int j, int k, int l)
 	{
 		const double pi = config.l.parity(i), pj = config.l.parity(j), pk = config.l.parity(k), pl = config.l.parity(l);
+		double delta_ij = (i==j) ? 1.0 : 0.0;
+		double delta_ki = (k==i) ? 1.0 : 0.0;
+		double delta_kj = (k==j) ? 1.0 : 0.0;
+		double delta_li = (l==i) ? 1.0 : 0.0;
+		double delta_lj = (l==j) ? 1.0 : 0.0;
+		double delta_lk = (l==k) ? 1.0 : 0.0;
 		
-		mat44(0, 1) = pi * pj * ca_et_gf_t[j*ns+i];
-		mat44(1, 0) = -ca_et_gf_t[j*ns+i];
+		mat44(0, 1) = -pi * pj * ca_et_gf_t[j*ns+i];
+		mat44(1, 0) = ca_et_gf_t[j*ns+i];
 		
-		mat44(0, 2) = pi * pk * ca_td_gf[k*ns+i];
-		mat44(2, 0) = -ca_td_gf[k*ns+i];
+		mat44(0, 2) = -pi * pk * ca_td_gf[k*ns+i];
+		mat44(2, 0) = ca_td_gf[k*ns+i];
 		
-		mat44(0, 3) = pi * pl * ca_td_gf[l*ns+i];
-		mat44(3, 0) = -ca_td_gf[l*ns+i];
+		mat44(0, 3) = -pi * pl * ca_td_gf[l*ns+i];
+		mat44(3, 0) = ca_td_gf[l*ns+i];
 		
-		mat44(1, 2) = pj * pk * ca_td_gf[k*ns+j];
-		mat44(2, 1) = -ca_td_gf[k*ns+j];
+		mat44(1, 2) = -pj * pk * ca_td_gf[k*ns+j];
+		mat44(2, 1) = ca_td_gf[k*ns+j];
 		
-		mat44(1, 3) = pj * pl * ca_td_gf[l*ns+j];
-		mat44(3, 1) = -ca_td_gf[l*ns+j];
+		mat44(1, 3) = -pj * pl * ca_td_gf[l*ns+j];
+		mat44(3, 1) = ca_td_gf[l*ns+j];
 		
-		mat44(2, 3) = pk * pl * ca_et_gf_0[l*ns+k];
-		mat44(3, 2) = -ca_et_gf_0[l*ns+k];
+		mat44(2, 3) = -pk * pl * ca_et_gf_0[l*ns+k];
+		mat44(3, 2) = ca_et_gf_0[l*ns+k];
 		
 		mat44(0, 0) = ca_et_gf_t[i*ns+i];
 		mat44(1, 1) = ca_et_gf_t[j*ns+j];

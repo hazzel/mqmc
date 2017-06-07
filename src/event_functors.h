@@ -147,7 +147,7 @@ struct event_static_measurement
 		int n_prebin, const std::vector<std::string>& observables)
 		: config(config_), rng(rng_)
 	{
-		obs.reserve(10);
+		obs.reserve(100);
 		for (int i = 0; i < observables.size(); ++i)
 		{
 			values.push_back(0.);
@@ -216,7 +216,7 @@ struct event_dynamic_measurement
 		int n_prebin, const std::vector<std::string>& observables)
 		: config(config_), rng(rng_)
 	{
-		obs.reserve(10);
+		obs.reserve(100);
 		for (int i = 0; i < observables.size(); ++i)
 		{
 			dyn_tau.push_back(std::vector<double>(2*config.param.n_discrete_tau+1,
