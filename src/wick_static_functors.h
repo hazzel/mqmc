@@ -144,54 +144,50 @@ struct wick_static_chern2
 	
 	double get_obs(const matrix_t& et_gf)
 	{
+		const numeric_t *ca_et_gf_0 = et_gf.data();
 		numeric_t ch = 0.;
-		for (auto& a : config.l.bonds("chern"))
-			for (auto& b : config.l.bonds("chern"))
+		auto& bonds_c1 = config.l.bonds("chern");
+		auto& bonds_c2 = config.l.bonds("chern_2");
+		const int N = bonds_c1.size(), ns = config.l.n_sites();
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
 			{
-				ch -= et_gf(a.second, a.first) * et_gf(b.second, b.first)
-					+ et_gf(b.second, a.first) * et_gf(b.first, a.second)
-					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
-					- et_gf(b.second, a.second) * et_gf(b.first, a.first)
-					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
-					- et_gf(b.first, a.first) * et_gf(b.second, a.second)
-					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
-					+ et_gf(b.first, a.second) * et_gf(b.second, a.first);
+				auto& a = bonds_c1[i];
+				auto& b = bonds_c1[j];
+				ch -= 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first]);
 			}
-		for (auto& a : config.l.bonds("chern_2"))
-			for (auto& b : config.l.bonds("chern"))
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
 			{
-				ch += et_gf(a.second, a.first) * et_gf(b.second, b.first)
-					- et_gf(b.second, a.first) * et_gf(b.first, a.second)
-					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
-					+ et_gf(b.second, a.second) * et_gf(b.first, a.first)
-					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
-					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
-					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
-					- et_gf(b.first, a.second) * et_gf(b.second, a.first);
+				auto& a = bonds_c2[i];
+				auto& b = bonds_c1[j];
+				ch += 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first]);
 			}
-		for (auto& a : config.l.bonds("chern"))
-			for (auto& b : config.l.bonds("chern_2"))
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
 			{
-				ch += et_gf(a.second, a.first) * et_gf(b.second, b.first)
-					- et_gf(b.second, a.first) * et_gf(b.first, a.second)
-					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
-					+ et_gf(b.second, a.second) * et_gf(b.first, a.first)
-					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
-					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
-					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
-					- et_gf(b.first, a.second) * et_gf(b.second, a.first);
+				auto& a = bonds_c1[i];
+				auto& b = bonds_c2[j];
+				ch += 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first]);
 			}
-		for (auto& a : config.l.bonds("chern_2"))
-			for (auto& b : config.l.bonds("chern_2"))
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
 			{
-				ch -= et_gf(a.second, a.first) * et_gf(b.second, b.first)
-					+ et_gf(b.second, a.first) * et_gf(b.first, a.second)
-					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
-					- et_gf(b.second, a.second) * et_gf(b.first, a.first)
-					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
-					- et_gf(b.first, a.first) * et_gf(b.second, a.second)
-					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
-					+ et_gf(b.first, a.second) * et_gf(b.second, a.first);
+				auto& a = bonds_c2[i];
+				auto& b = bonds_c2[j];
+				ch -= 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first]);
 			}
 		return std::real(ch) / std::pow(config.l.n_bonds(), 2);
 	}
@@ -208,81 +204,73 @@ struct wick_static_S_chern_q
 	
 	double get_obs(const matrix_t& et_gf)
 	{
-		numeric_t S = 0.;
+		const numeric_t *ca_et_gf_0 = et_gf.data();
+		numeric_t ch = 0.;
+		auto& bonds_c1 = config.l.bonds("chern");
+		auto& bonds_c2 = config.l.bonds("chern_2");
 		auto& q = config.l.symmetry_point("q");
-		for (auto& a : config.l.bonds("chern"))
+		const int N = bonds_c1.size(), ns = config.l.n_sites();
+		for (int i = 0; i < N; ++i)
 		{
+			auto& a = bonds_c1[i];
 			auto& r_i = config.l.real_space_coord(a.first);
-			for (auto& b : config.l.bonds("chern"))
+			for (int j = 0; j < N; ++j)
 			{
+				auto& b = bonds_c1[j];
 				auto& r_j = config.l.real_space_coord(b.first);
 				double qr = q.dot(r_i - r_j);
-				S -= (et_gf(a.second, a.first) * et_gf(b.second, b.first)
-					+ et_gf(b.second, a.first) * et_gf(b.first, a.second)
-					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
-					- et_gf(b.second, a.second) * et_gf(b.first, a.first)
-					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
-					- et_gf(b.first, a.first) * et_gf(b.second, a.second)
-					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
-					+ et_gf(b.first, a.second) * et_gf(b.second, a.first))
-					* std::cos(qr);
+				ch -= 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first])*std::cos(qr);
 			}
 		}
-		for (auto& a : config.l.bonds("chern_2"))
+		for (int i = 0; i < N; ++i)
 		{
+			auto& a = bonds_c2[i];
 			auto& r_i = config.l.real_space_coord(a.first);
-			for (auto& b : config.l.bonds("chern"))
+			for (int j = 0; j < N; ++j)
 			{
+				auto& b = bonds_c1[j];
 				auto& r_j = config.l.real_space_coord(b.first);
 				double qr = q.dot(r_i - r_j);
-				S += (et_gf(a.second, a.first) * et_gf(b.second, b.first)
-					- et_gf(b.second, a.first) * et_gf(b.first, a.second)
-					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
-					+ et_gf(b.second, a.second) * et_gf(b.first, a.first)
-					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
-					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
-					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
-					- et_gf(b.first, a.second) * et_gf(b.second, a.first))
-					* std::cos(qr);
+				ch += 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first])*std::cos(qr);
 			}
 		}
-		for (auto& a : config.l.bonds("chern"))
+		for (int i = 0; i < N; ++i)
 		{
+			auto& a = bonds_c1[i];
 			auto& r_i = config.l.real_space_coord(a.first);
-			for (auto& b : config.l.bonds("chern_2"))
+			for (int j = 0; j < N; ++j)
 			{
+				auto& b = bonds_c2[j];
 				auto& r_j = config.l.real_space_coord(b.first);
 				double qr = q.dot(r_i - r_j);
-				S += (et_gf(a.second, a.first) * et_gf(b.second, b.first)
-					- et_gf(b.second, a.first) * et_gf(b.first, a.second)
-					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
-					+ et_gf(b.second, a.second) * et_gf(b.first, a.first)
-					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
-					+ et_gf(b.first, a.first) * et_gf(b.second, a.second)
-					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
-					- et_gf(b.first, a.second) * et_gf(b.second, a.first))
-					* std::cos(qr);
+				ch += 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first])*std::cos(qr);
 			}
 		}
-		for (auto& a : config.l.bonds("chern_2"))
+		for (int i = 0; i < N; ++i)
 		{
+			auto& a = bonds_c2[i];
 			auto& r_i = config.l.real_space_coord(a.first);
-			for (auto& b : config.l.bonds("chern_2"))
+			for (int j = 0; j < N; ++j)
 			{
+				auto& b = bonds_c2[j];
 				auto& r_j = config.l.real_space_coord(b.first);
 				double qr = q.dot(r_i - r_j);
-				S -= (et_gf(a.second, a.first) * et_gf(b.second, b.first)
-					+ et_gf(b.second, a.first) * et_gf(b.first, a.second)
-					- et_gf(a.first, a.second) * et_gf(b.second, b.first)
-					- et_gf(b.second, a.second) * et_gf(b.first, a.first)
-					- et_gf(a.second, a.first) * et_gf(b.first, b.second)
-					- et_gf(b.first, a.first) * et_gf(b.second, a.second)
-					+ et_gf(a.first, a.second) * et_gf(b.first, b.second)
-					+ et_gf(b.first, a.second) * et_gf(b.second, a.first))
-					* std::cos(qr);
+				ch -= 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first])*std::cos(qr);
 			}
 		}
-		return std::real(S) / std::pow(config.l.n_bonds(), 2);
+		return std::real(ch) / std::pow(config.l.n_bonds(), 2);
 	}
 };
 

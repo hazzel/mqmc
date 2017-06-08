@@ -188,36 +188,43 @@ struct wick_epsilon_V
 		numeric_t ep = 0.;
 		auto& single_bonds = config.l.bonds("single_d1_bonds");
 		const int N = single_bonds.size(), ns = config.l.n_sites();
-		/*
+		
 		for (int s = 0; s < N; ++s)
 		{
 			int i = single_bonds[s].first, j = single_bonds[s].second;
-			double delta_ii = 1., delta_jj = 1.;
-			double delta_ij = (i == j ? 1. : 0.);
+			const double pi = config.l.parity(i), pj = config.l.parity(j);
 			#pragma distribute_point
 			for (int t = 0; t < N; ++t)
 			{
 				int m = single_bonds[t].first, n = single_bonds[t].second;
-				double delta_mm = 1., delta_nn = 1.;
-				double delta_mn = (m == n ? 1. : 0.);
-				ep += (delta_ii - ca_et_gf_t[i*ns+i]) * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_mm - ca_et_gf_0[m*ns+m]) * ((delta_nn - ca_et_gf_0[n*ns+n])) + (delta_mn - ca_et_gf_0[m*ns+n]) * (ca_et_gf_0[n*ns+m])) + (config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * (ca_td_gf[m*ns+j] * ((delta_nn - ca_et_gf_0[n*ns+n])) + (-ca_td_gf[n*ns+j]) * ((delta_mn - ca_et_gf_0[m*ns+n]))) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_td_gf[m*ns+j] * (ca_et_gf_0[n*ns+m]) + ca_td_gf[n*ns+j] * ((delta_mm - ca_et_gf_0[m*ns+m]))));
-				ep += (delta_ij - ca_et_gf_t[i*ns+j]) * (ca_et_gf_t[j*ns+i] * ((delta_mm - ca_et_gf_0[m*ns+m]) * ((delta_nn - ca_et_gf_0[n*ns+n])) + (delta_mn - ca_et_gf_0[m*ns+n]) * (ca_et_gf_0[n*ns+m])) + (-ca_td_gf[m*ns+i]) * ((config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * ((delta_nn - ca_et_gf_0[n*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_et_gf_0[n*ns+m])) + (-ca_td_gf[n*ns+i]) * ((-config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * ((delta_mn - ca_et_gf_0[m*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * ((delta_mm - ca_et_gf_0[m*ns+m]))));
-				ep += (config.l.parity(i)*config.l.parity(m)*ca_td_gf[i*ns+m]) * (ca_et_gf_t[j*ns+i] * (ca_td_gf[m*ns+j] * ((delta_nn - ca_et_gf_0[n*ns+n])) + (-ca_td_gf[n*ns+j]) * ((delta_mn - ca_et_gf_0[m*ns+n]))) + ca_td_gf[m*ns+i] * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_nn - ca_et_gf_0[n*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_td_gf[n*ns+j])) + (-ca_td_gf[n*ns+i]) * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_mn - ca_et_gf_0[m*ns+n])) + (config.l.parity(j)*config.l.parity(n)*ca_td_gf[j*ns+n]) * (ca_td_gf[m*ns+j])));
-				ep += (config.l.parity(i)*config.l.parity(n)*ca_td_gf[i*ns+n]) * (ca_et_gf_t[j*ns+i] * (ca_td_gf[m*ns+j] * (ca_et_gf_0[n*ns+m]) + ca_td_gf[n*ns+j] * ((delta_mm - ca_et_gf_0[m*ns+m]))) + ca_td_gf[m*ns+i] * ((delta_jj - ca_et_gf_t[j*ns+j]) * (ca_et_gf_0[n*ns+m]) + (-config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * (ca_td_gf[n*ns+j])) + ca_td_gf[n*ns+i] * ((delta_jj - ca_et_gf_t[j*ns+j]) * ((delta_mm - ca_et_gf_0[m*ns+m])) + (config.l.parity(j)*config.l.parity(m)*ca_td_gf[j*ns+m]) * (ca_td_gf[m*ns+j])));
+				const double pm = config.l.parity(m), pn = config.l.parity(n);
+				
+				ep += pi*pi*ca_et_gf_t[i*ns+i] * (pj*pj*ca_et_gf_t[j*ns+j] * (pm*pm*ca_et_gf_0[m*ns+m] * (pn*pn*ca_et_gf_0[n*ns+n]) + pm*pn*ca_et_gf_0[n*ns+m] * (ca_et_gf_0[n*ns+m])) + pj*pm*ca_td_gf[m*ns+j] * (ca_td_gf[m*ns+j] * (pn*pn*ca_et_gf_0[n*ns+n]) + (-ca_td_gf[n*ns+j]) * (pm*pn*ca_et_gf_0[n*ns+m])) + pj*pn*ca_td_gf[n*ns+j] * (ca_td_gf[m*ns+j] * (ca_et_gf_0[n*ns+m]) + ca_td_gf[n*ns+j] * (pm*pm*ca_et_gf_0[m*ns+m])));
+				ep += pi*pj*ca_et_gf_t[j*ns+i] * (ca_et_gf_t[j*ns+i] * (pm*pm*ca_et_gf_0[m*ns+m] * (pn*pn*ca_et_gf_0[n*ns+n]) + pm*pn*ca_et_gf_0[n*ns+m] * (ca_et_gf_0[n*ns+m])) + (-ca_td_gf[m*ns+i]) * (pj*pm*ca_td_gf[m*ns+j] * (pn*pn*ca_et_gf_0[n*ns+n]) + pj*pn*ca_td_gf[n*ns+j] * (ca_et_gf_0[n*ns+m])) + (-ca_td_gf[n*ns+i]) * ((-pj*pm*ca_td_gf[m*ns+j]) * (pm*pn*ca_et_gf_0[n*ns+m]) + pj*pn*ca_td_gf[n*ns+j] * (pm*pm*ca_et_gf_0[m*ns+m])));
+				ep += pi*pm*ca_td_gf[m*ns+i] * (ca_et_gf_t[j*ns+i] * (ca_td_gf[m*ns+j] * (pn*pn*ca_et_gf_0[n*ns+n]) + (-ca_td_gf[n*ns+j]) * (pm*pn*ca_et_gf_0[n*ns+m])) + ca_td_gf[m*ns+i] * (pj*pj*ca_et_gf_t[j*ns+j] * (pn*pn*ca_et_gf_0[n*ns+n]) + pj*pn*ca_td_gf[n*ns+j] * (ca_td_gf[n*ns+j])) + (-ca_td_gf[n*ns+i]) * (pj*pj*ca_et_gf_t[j*ns+j] * (pm*pn*ca_et_gf_0[n*ns+m]) + pj*pn*ca_td_gf[n*ns+j] * (ca_td_gf[m*ns+j])));
+				ep += pi*pn*ca_td_gf[n*ns+i] * (ca_et_gf_t[j*ns+i] * (ca_td_gf[m*ns+j] * (ca_et_gf_0[n*ns+m]) + ca_td_gf[n*ns+j] * (pm*pm*ca_et_gf_0[m*ns+m])) + ca_td_gf[m*ns+i] * (pj*pj*ca_et_gf_t[j*ns+j] * (ca_et_gf_0[n*ns+m]) + (-pj*pm*ca_td_gf[m*ns+j]) * (ca_td_gf[n*ns+j])) + ca_td_gf[n*ns+i] * (pj*pj*ca_et_gf_t[j*ns+j] * (pm*pm*ca_et_gf_0[m*ns+m]) + pj*pm*ca_td_gf[m*ns+j] * (ca_td_gf[m*ns+j])));
+				
+				/*
+				ep += pi*pj*ca_et_gf_t[j*ns+i] * (ca_et_gf_t[j*ns+i] * pm*pn*ca_et_gf_0[n*ns+m] * (ca_et_gf_0[n*ns+m]) + (-ca_td_gf[m*ns+i]) * pj*pn*ca_td_gf[n*ns+j] * (ca_et_gf_0[n*ns+m]) + (-ca_td_gf[n*ns+i]) * (-pj*pm*ca_td_gf[m*ns+j]) * (pm*pn*ca_et_gf_0[n*ns+m]));
+				ep += pi*pm*ca_td_gf[m*ns+i] * (ca_et_gf_t[j*ns+i] * (-ca_td_gf[n*ns+j]) * (pm*pn*ca_et_gf_0[n*ns+m]) + ca_td_gf[m*ns+i] * (pj*pn*ca_td_gf[n*ns+j] * (ca_td_gf[n*ns+j])) + (-ca_td_gf[n*ns+i]) * pj*pn*ca_td_gf[n*ns+j] * (ca_td_gf[m*ns+j]));
+				ep += pi*pn*ca_td_gf[n*ns+i] * (ca_et_gf_t[j*ns+i] * ca_td_gf[m*ns+j] * (ca_et_gf_0[n*ns+m]) + ca_td_gf[m*ns+i] * (pj*pj*ca_et_gf_t[j*ns+j] * (ca_et_gf_0[n*ns+m]) + (-pj*pm*ca_td_gf[m*ns+j]) * (ca_td_gf[n*ns+j])) + ca_td_gf[n*ns+i] * pj*pm*ca_td_gf[m*ns+j] * (ca_td_gf[m*ns+j]));
+				*/
 			}
-			*/
-		
-			Eigen::Matrix<numeric_t, 4, 4> mat44 = Eigen::Matrix<numeric_t, 4, 4>::Zero();
-			for (int s = 0; s < N; ++s)
-			{
-				int i = single_bonds[s].first, j = single_bonds[s].second;
-				//#pragma distribute_point
-				for (int t = 0; t < N; ++t)
-				{
-					int m = single_bonds[t].first, n = single_bonds[t].second;
-					ep += evaluate(mat44, ns, i, j, m, n);
-				}
 		}
+		
+		/*
+		Eigen::Matrix<numeric_t, 4, 4> mat44 = Eigen::Matrix<numeric_t, 4, 4>::Zero();
+		for (int s = 0; s < N; ++s)
+		{
+			int i = single_bonds[s].first, j = single_bonds[s].second;
+			//#pragma distribute_point
+			for (int t = 0; t < N; ++t)
+			{
+				int m = single_bonds[t].first, n = single_bonds[t].second;
+				ep += evaluate(mat44, ns, i, j, m, n);
+			}
+		}
+		*/
 		return std::real(ep) / std::pow(config.l.n_bonds(), 2.);
 	}
 };

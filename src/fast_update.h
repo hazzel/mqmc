@@ -1019,11 +1019,9 @@ class fast_update
 						dyn_tau[i][2*n-1] = obs[i].get_obs(et_gf_0, et_gf_R[2*n-2],
 							time_displaced_gf);
 					time_displaced_gf = time_displaced_gf * g_r;
-					//std::cout << "n = " << n << ": " << time_displaced_gf.norm() << std::endl;
 					for (int i = 0; i < dyn_tau.size(); ++i)
 						dyn_tau[i][2*n] = obs[i].get_obs(et_gf_0, et_gf_R[2*n-1],
 							time_displaced_gf);
-					//std::cout << "n = " << n << ": " << time_displaced_gf.norm() << std::endl;
 				}
 				
 
