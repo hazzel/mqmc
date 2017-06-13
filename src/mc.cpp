@@ -24,7 +24,16 @@ mc::mc(const std::string& dir)
 	n_warmup = pars.value_or_default<int>("warmup", 100000);
 	n_prebin = pars.value_or_default<int>("prebin", 500);
 	config.param.geometry = pars.value_or_default<std::string>("geometry", "rhom");
-	config.param.L = pars.value_or_default<int>("L", 9);
+	if (pars.defined("L"))
+	{
+		config.param.Lx = pars.value_or_default<int>("L", 9);
+		config.param.Ly = config.param.Lx;
+	}
+	else
+	{
+		config.param.Lx = pars.value_or_default<int>("Lx", 9);
+		config.param.Ly = pars.value_or_default<int>("Ly", 9);
+	}
 	config.param.beta = 1./pars.value_or_default<double>("T", 0.2);
 	config.param.n_tau_slices = pars.value_or_default<double>("tau_slices", 500);
 	config.param.n_discrete_tau = pars.value_or_default<double>("discrete_tau",
@@ -68,13 +77,13 @@ mc::mc(const std::string& dir)
 	//Initialize lattice
 	if (config.param.geometry == "hex")
 	{
-		hex_honeycomb hc(config.param.L);
+		hex_honeycomb hc(config.param.Lx);
 		config.l.generate_graph(hc);
 		hc.generate_maps(config.l);
 	}
 	else
 	{
-		honeycomb hc(config.param.L);
+		honeycomb hc(config.param.Lx, config.param.Ly);
 		config.l.generate_graph(hc);
 		hc.generate_maps(config.l);
 	}

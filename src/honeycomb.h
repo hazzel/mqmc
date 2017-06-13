@@ -14,7 +14,8 @@ struct honeycomb
 	typedef boost::adjacency_list<boost::setS, boost::vecS,
 		boost::undirectedS> graph_t;
 
-	int L;
+	int Lx;
+	int Ly;
 	std::vector<Eigen::Vector2d> real_space_map;
 	std::vector<std::pair<int, int>> coord_map;
 	// Base vectors of Bravais lattice
@@ -27,18 +28,39 @@ struct honeycomb
 	Eigen::Vector2d delta;
 	double pi = 4. * std::atan(1.);
 
-	honeycomb(int L_ = 6)
-		: L(L_),
+	honeycomb(int Lx_ = 6, int Ly_ = 6)
+		: Lx(Lx_), Ly(Ly_),
 			a1(3./2., std::sqrt(3.)/2.), a2(3./2., -std::sqrt(3.)/2.),
 			delta(1./2., std::sqrt(3.)/2.)
 	{
 		b1 = Eigen::Vector2d(2.*pi/3., 2.*pi/std::sqrt(3.));
 		b2 = Eigen::Vector2d(2.*pi/3., -2.*pi/std::sqrt(3.));
 	}
+	
+	int neighbor_site(int site, int type)
+	{
+		int i = site % (2 * Lx), n_vertices = 2 * Lx * Ly;
+		if (type == 0)
+			return (site + 1 + n_vertices) % n_vertices;
+		else if (type == 1)
+		{
+			if (i == 0)
+				return (site + 2*Lx - 1 + n_vertices) % n_vertices;
+			else
+				return (site - 1 + n_vertices) % n_vertices;
+		}
+		else if (type == 2)
+		{
+			if (i == 0)
+				return (site + 4*Lx - 1 + n_vertices) % n_vertices;
+			else
+				return (site + 2*Lx - 1 + n_vertices) % n_vertices;
+		}
+	}
 
 	graph_t* graph()
 	{
-		int n_sites = 2 * L * L;
+		int n_sites = 2 * Lx * Ly;
 		graph_t* g = new graph_t(n_sites);
 		add_edges(g);
 		return g;
@@ -48,58 +70,37 @@ struct honeycomb
 	{
 		typedef std::pair<int, int> edge_t;
 		int n_vertices = boost::num_vertices(*g);
-		for (int i = 0; i < n_vertices; ++i)
-		{
-			if (i % 2 == 1)
+		for (int j = 0; j < Ly; ++j)
+			for (int i = 0; i < Lx; ++i)
 			{
-				if ((i+1) % (2*L) == 0)
-				{
-					boost::add_edge(i, (i - 4*L + 1 + n_vertices) % n_vertices, *g);
-					boost::add_edge(i, (i - 2*L + 1 + n_vertices) % n_vertices, *g);
-					boost::add_edge(i, (i - 1 + n_vertices) % n_vertices, *g);
-				}
-				else
-				{
-					boost::add_edge(i, (i - 2*L + 1 + n_vertices) % n_vertices, *g);
-					boost::add_edge(i, (i + 1 + n_vertices) % n_vertices, *g);
-					boost::add_edge(i, (i - 1 + n_vertices) % n_vertices, *g);
-				}
-				double c1 = static_cast<int>((i-1)  % (2*L)) / 2;
-				double c2 = static_cast<int>((i-1)  / (2*L));
-				real_space_map.push_back(Eigen::Vector2d{c1*a1 + c2*a2 + delta});
-				coord_map.push_back({c1, c2});
+				int n = j * 2 * Lx + i * 2;
+				
+				boost::add_edge(n, neighbor_site(n, 0), *g);
+				boost::add_edge(neighbor_site(n, 0), n, *g);
+				
+				boost::add_edge(n, neighbor_site(n, 1), *g);
+				boost::add_edge(neighbor_site(n, 1), n, *g);
+				
+				boost::add_edge(n, neighbor_site(n, 2), *g);
+				boost::add_edge(neighbor_site(n, 2), n, *g);
+				
+				real_space_map.push_back(Eigen::Vector2d{i * a1 + j * a2});
+				coord_map.push_back({i, j});
+				
+				real_space_map.push_back(Eigen::Vector2d{i * a1 + j * a2 + delta});
+				coord_map.push_back({i, j});
 			}
-			else
-			{
-				if (i % (2*L) == 0)
-				{
-					boost::add_edge(i, (i + 4*L - 1 + n_vertices) % n_vertices, *g);
-					boost::add_edge(i, (i + 2*L - 1 + n_vertices) % n_vertices, *g);
-					boost::add_edge(i, (i + 1 + n_vertices) % n_vertices, *g);
-				}
-				else
-				{
-					boost::add_edge(i, (i + 2*L - 1 + n_vertices) % n_vertices, *g);
-					boost::add_edge(i, (i - 1 + n_vertices) % n_vertices, *g);
-					boost::add_edge(i, (i + 1 + n_vertices) % n_vertices, *g);
-				}
-				double c1 = static_cast<int>(i  % (2*L)) / 2;
-				double c2 = static_cast<int>(i  / (2*L));
-				real_space_map.push_back(Eigen::Vector2d{c1 * a1 + c2 * a2});
-				coord_map.push_back({c1, c2});
-			}
-		}
 	}
 
 	Eigen::Vector2d closest_k_point(const Eigen::Vector2d& K)
 	{
 		Eigen::Vector2d x = {0., 0.};
 		double dist = (x - K).norm();
-		for (int i = 0; i < L; ++i)
-			for (int j = 0; j < L; ++j)
+		for (int i = 0; i < Lx; ++i)
+			for (int j = 0; j < Ly; ++j)
 			{
-				Eigen::Vector2d y = static_cast<double>(i) / static_cast<double>(L)
-					* b1 + static_cast<double>(j) / static_cast<double>(L) * b2;
+				Eigen::Vector2d y = static_cast<double>(i) / static_cast<double>(Lx)
+					* b1 + static_cast<double>(j) / static_cast<double>(Ly) * b2;
 				double d = (y - K).norm();
 				if (d < dist)
 				{
@@ -117,7 +118,8 @@ struct honeycomb
 		l.b1 = b1;
 		l.b2 = b2;
 		l.delta = delta;
-		l.L = L;
+		l.Lx = Lx;
+		l.Ly = Ly;
 	
 		//Symmetry points
 		std::map<std::string, Eigen::Vector2d> points;
@@ -126,7 +128,7 @@ struct honeycomb
 		points["Kp"] = closest_k_point({2.*pi/3., -2.*pi/3./std::sqrt(3.)});
 		points["Gamma"] = closest_k_point({0., 0.});
 		points["M"] = closest_k_point({2.*pi/3., 0.});
-		points["q"] = closest_k_point(b1 / L);
+		points["q"] = closest_k_point(b1 / Lx);
 		l.add_symmetry_points(points);
 
 		//Site maps
@@ -142,141 +144,80 @@ struct honeycomb
 		l.generate_bond_map("d3_bonds", [&]
 			(lattice::vertex_t i, lattice::vertex_t j)
 			{ return l.distance(i, j) == 3; });
+		
 		l.generate_bond_map("kekule", [&]
 			(lattice::pair_vector_t& list)
 		{
 			int N = l.n_sites();
-			if (L == 2)
+			if (Lx == 2 && Ly == 2)
 			{
 				list = {{0, 1}, {1, 0}, {4, 7}, {7, 4}, {2, 5}, {5, 2}};
 				return;
 			}
-
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; j+=3)
+			
+			int j_type = 0, i_type = 0;
+			for (int j = 0; j < Ly; ++j)
+			{
+				i_type = j_type;
+				for (int i = 0; i < Lx; ++i)
 				{
-					int x0 = 2 * i + 2 * L * i;
-					list.push_back({(x0 + 2*L*j) % N, (x0 + 2*L*j+1) % N});
-					list.push_back({(x0 + 2*L*j+1) % N, (x0 + 2*L*j) % N});
-
-					int x1 = 2 * i + 2 * L * i + 4*L;
-					if (i == 0)
-					{
-						list.push_back({(x1 + 2*L*j) % N, (x1 + 2*L*j + 4*L-1) % N});
-						list.push_back({(x1 + 2*L*j + 4*L-1) % N, (x1 + 2*L*j) % N});
-					}
-					else
-					{
-						list.push_back({(x1 + 2*L*j) % N, (x1 + 2*L*j + 2*L-1) % N});
-						list.push_back({(x1 + 2*L*j + 2*L-1) % N, (x1 + 2*L*j) % N});
-					}
-
-					int x2 = 2 * i + 2 * L * i + 2*L;
-					if (i == 0)
-					{
-						list.push_back({(x2 + 2*L*j) % N, (x2 + 2*L*j + 2*L-1) % N});
-						list.push_back({(x2 + 2*L*j + 2*L-1) % N, (x2 + 2*L*j) % N});
-					}
-					else
-					{
-						list.push_back({(x2 + 2*L*j) % N, (x2 + 2*L*j - 1) % N});
-						list.push_back({(x2 + 2*L*j - 1) % N, (x2 + 2*L*j) % N});
-					}
+					int n = j * 2 * Lx + i * 2;
+					list.push_back({n, neighbor_site(n, i_type)});
+					list.push_back({neighbor_site(n, i_type), n});
+					i_type = (i_type - 1 + 3) % 3;
 				}
+				j_type = (j_type + 1 + 3) % 3;
+			}
 		});
 		
 		l.generate_bond_map("kekule_2", [&]
 			(lattice::pair_vector_t& list)
 		{
 			int N = l.n_sites();
-			if (L == 2)
+			if (Lx == 2 && Ly == 2)
 			{
 				list = {{1, 2}, {2, 1}, {4, 5}, {5, 4}, {0, 7}, {7, 0}};
 				return;
 			}
 
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; j+=3)
+			int j_type = 2, i_type = 0;
+			for (int j = 0; j < Ly; ++j)
+			{
+				i_type = j_type;
+				for (int i = 0; i < Lx; ++i)
 				{
-					int x0 = 2 * i + 2 * L * i;
-					if (i == L - 1)
-					{
-						list.push_back({(x0+1 + 2*L*j) % N, (x0 + 2*L*j - 2*(L-1)) % N});
-						list.push_back({(x0 + 2*L*j - 2*(L-1)) % N, (x0+1 + 2*L*j) % N});
-					}
-					else
-					{
-						list.push_back({(x0+1 + 2*L*j) % N, (x0+1 + 2*L*j+1) % N});
-						list.push_back({(x0+1 + 2*L*j+1) % N, (x0+1 + 2*L*j) % N});
-					}
-
-					int x1 = 2 * i + 2 * L * i + 2*L;
-					list.push_back({(x1 + 2*L*j) % N, (x1 + 2*L*j + 1) % N});
-					list.push_back({(x1 + 2*L*j + 1) % N, (x1 + 2*L*j) % N});
-
-					if (i == 0)
-					{
-						list.push_back({(x0 + 2*L*j) % N, (x0 + 2*L*j + 4*L-1) % N});
-						list.push_back({(x0 + 2*L*j + 4*L-1) % N, (x0 + 2*L*j) % N});
-					}
-					else
-					{
-						list.push_back({(x0 + 2*L*j) % N, (x0 + 2*L*j + 2*L-1) % N});
-						list.push_back({(x0 + 2*L*j + 2*L-1) % N, (x0 + 2*L*j) % N});
-					}
+					int n = j * 2 * Lx + i * 2;
+					list.push_back({n, neighbor_site(n, i_type)});
+					list.push_back({neighbor_site(n, i_type), n});
+					i_type = (i_type - 1 + 3) % 3;
 				}
+				j_type = (j_type + 1 + 3) % 3;
+			}
 		});
 		
 		l.generate_bond_map("kekule_3", [&]
 			(lattice::pair_vector_t& list)
 		{
 			int N = l.n_sites();
-			if (L == 2)
+			if (Lx == 2 && Ly == 2)
 			{
 				list = {{2, 3}, {3, 2}, {5, 6}, {6, 5}, {3, 4}, {4, 3}};
 				return;
 			}
 
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; j+=3)
+			int j_type = 1, i_type = 0;
+			for (int j = 0; j < Ly; ++j)
+			{
+				i_type = j_type;
+				for (int i = 0; i < Lx; ++i)
 				{
-					int x0 = 2 * i + 2 * L * i;
-					
-					if (i == L - 1)
-					{
-						list.push_back({(x0+1 + 2*L*j + 2 - 2*L) % N, (x0 + 2*L*j - 2*(L-1)) % N});
-						list.push_back({(x0 + 2*L*j - 2*(L-1)) % N, (x0+1 + 2*L*j + 2 - 2*L) % N});
-					}
-					else
-					{
-						list.push_back({(x0+1 + 2*L*j+2) % N, (x0+1 + 2*L*j+1) % N});
-						list.push_back({(x0+1 + 2*L*j+1) % N, (x0+1 + 2*L*j+2) % N});
-					}
-					
-					int x1 = 2 * i + 2 * L * i + 2*L;
-					if (i == L - 1)
-					{
-						list.push_back({(x1 + 2*L*j + 2 - 2*L) % N, (x1 + 2*L*j + 1) % N});
-						list.push_back({(x1 + 2*L*j + 1) % N, (x1 + 2*L*j + 2 - 2*L) % N});
-					}
-					else
-					{
-						list.push_back({(x1 + 2*L*j + 2) % N, (x1 + 2*L*j + 1) % N});
-						list.push_back({(x1 + 2*L*j + 1) % N, (x1 + 2*L*j + 2) % N});
-					}
-					
-					int x2 = 2 * i + 2 * L * i + 2 * L;
-					if (i == 0)
-					{
-						list.push_back({(x2 + 2*L*j) % N, (x2 + 2*L*j + 4*L-1) % N});
-						list.push_back({(x2 + 2*L*j + 4*L-1) % N, (x2 + 2*L*j) % N});
-					}
-					else
-					{
-						list.push_back({(x2 + 2*L*j) % N, (x2 + 2*L*j + 2*L-1) % N});
-						list.push_back({(x2 + 2*L*j + 2*L-1) % N, (x2 + 2*L*j) % N});
-					}
+					int n = j * 2 * Lx + i * 2;
+					list.push_back({n, neighbor_site(n, i_type)});
+					list.push_back({neighbor_site(n, i_type), n});
+					i_type = (i_type - 1 + 3) % 3;
 				}
+				j_type = (j_type + 1 + 3) % 3;
+			}
 		});
 		
 		l.generate_bond_map("single_kekule", [&]
@@ -307,31 +248,31 @@ struct honeycomb
 		(lattice::pair_vector_t& list)
 		{
 			int N = l.n_sites();
-			if (L == 2)
+			if (Lx == 2 && Ly == 2)
 			{
 				list = {{0, 4}, {4, 2}, {2, 0}, {2, 6}, {6, 4}, {0, 6}};
 				return;
 			}
 
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; ++j)
+			for (int i = 0; i < Lx; ++i)
+				for (int j = 0; j < Ly; ++j)
 				{
-					int x = 2 * i + 2 * L * j;
-					int y = x + 2 * L;
+					int x = 2 * i + 2 * Lx * j;
+					int y = x + 2 * Lx;
 					list.push_back({x % N, y % N});
 	
-					x = 2 * i + 2 * L * j;
-					if (i == L - 1)
-						y = x - 2 * (L - 1);
+					x = 2 * i + 2 * Lx * j;
+					if (i == Lx - 1)
+						y = x - 2 * (Lx - 1);
 					else
 						y = x + 2;
 					list.push_back({(y+N) % N, x % N});
 				
-					x = 2 * i + 2 * L * j;
+					x = 2 * i + 2 * Lx * j;
 					if (i == 0)
-						y = x + 4 * L - 2;
+						y = x + 4 * Lx - 2;
 					else
-						y = x + 2 * (L - 1);
+						y = x + 2 * (Lx - 1);
 					list.push_back({y % N, x % N});
 				}
 		});
@@ -340,144 +281,98 @@ struct honeycomb
 		(lattice::pair_vector_t& list)
 		{
 			int N = l.n_sites();
-			if (L == 2)
+			if (Lx == 2 && Ly == 2)
 			{
 				list = {{1, 5}, {5, 3}, {3, 1}, {3, 7}, {7, 5}, {1, 7}};
 				return;
 			}
 
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; ++j)
+			for (int i = 0; i < Lx; ++i)
+				for (int j = 0; j < Ly; ++j)
 				{
-					int x = 2 * i + 1 + 2 * L * j;
-					int y = x + 2 * L;
+					int x = 2 * i + 1 + 2 * Lx * j;
+					int y = x + 2 * Lx;
 					list.push_back({y % N, x % N});
 	
-					x = 2 * i + 1 + 2 * L * j;
-					if (i == L - 1)
-						y = x - 2 * (L - 1);
+					x = 2 * i + 1 + 2 * Lx * j;
+					if (i == Lx - 1)
+						y = x - 2 * (Lx - 1);
 					else
 						y = x + 2;
 					list.push_back({x % N, (y+N) % N});
 				
-					x = 2 * i + 1 + 2 * L * j;
+					x = 2 * i + 1 + 2 * Lx * j;
 					if (i == 0)
-						y = x + 4 * L - 2;
+						y = x + 4 * Lx - 2;
 					else
-						y = x + 2 * (L - 1);
+						y = x + 2 * (Lx - 1);
 					list.push_back({x % N, y % N});
 				}
 		});
 		
-		/*
-		l.generate_bond_map("chern_max_dist", [&]
-		(lattice::pair_vector_t& list)
-		{
-			int N = l.n_sites();
-			for (auto& a : l.bonds("chern_1"))
-			{
-				
-			}
-		});
-		*/
-		
 		l.generate_bond_map("nn_bond_1", [&]
 		(lattice::pair_vector_t& list)
 		{
-			int N = l.n_sites();
-
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; ++j)
+			for (int j = 0; j < Ly; ++j)
+				for (int i = 0; i < Lx; ++i)
 				{
-					int x = 2 * i + 2 * L * j;
-					int y = x + 1;
-					list.push_back({y % N, x % N});
+					int n = j * 2 * Lx + i * 2;
+					list.push_back({neighbor_site(n, 0), n});
 				}
 		});
 		
 		l.generate_bond_map("nn_bond_2", [&]
 		(lattice::pair_vector_t& list)
 		{
-			int N = l.n_sites();
-
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; ++j)
+			for (int j = 0; j < Ly; ++j)
+				for (int i = 0; i < Lx; ++i)
 				{
-					int x = 2 * i + 2 * L * j;
-					int y;
-					if (i == 0)
-						y = x + 4 * L - 1;
-					else
-						y = x + 2 * L - 1;
-					list.push_back({y % N, x % N});
+					int n = j * 2 * Lx + i * 2;
+					list.push_back({neighbor_site(n, 2), n});
 				}
 		});
 		
 		l.generate_bond_map("nn_bond_3", [&]
 		(lattice::pair_vector_t& list)
 		{
-			int N = l.n_sites();
-
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; ++j)
+			for (int j = 0; j < Ly; ++j)
+				for (int i = 0; i < Lx; ++i)
 				{
-					int x = 2 * i + 2 * L * j;
-					int y;
-					if (i == 0)
-						y = x + 2 * L - 1;
-					else
-						y = x - 1;
-					list.push_back({y % N, x % N});
+					int n = j * 2 * Lx + i * 2;
+					list.push_back({neighbor_site(n, 1), n});
 				}
 		});
 		
-		l.generate_bond_map("nn_bond_1_inv", [&]
+		l.generate_bond_map("inv_nn_bond_1", [&]
 		(lattice::pair_vector_t& list)
 		{
-			int N = l.n_sites();
-
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; ++j)
+			for (int j = 0; j < Ly; ++j)
+				for (int i = 0; i < Lx; ++i)
 				{
-					int x = 2 * i + 2 * L * j;
-					int y = x + 1;
-					list.push_back({l.inverted_site(y % N), l.inverted_site(x % N)});
+					int n = j * 2 * Lx + i * 2;
+					list.push_back({l.inverted_site(neighbor_site(n, 0)), l.inverted_site(n)});
 				}
 		});
 		
-		l.generate_bond_map("nn_bond_2_inv", [&]
+		l.generate_bond_map("inv_nn_bond_2", [&]
 		(lattice::pair_vector_t& list)
 		{
-			int N = l.n_sites();
-
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; ++j)
+			for (int j = 0; j < Ly; ++j)
+				for (int i = 0; i < Lx; ++i)
 				{
-					int x = 2 * i + 2 * L * j;
-					int y;
-					if (i == 0)
-						y = x + 4 * L - 1;
-					else
-						y = x + 2 * L - 1;
-					list.push_back({l.inverted_site(y % N), l.inverted_site(x % N)});
+					int n = j * 2 * Lx + i * 2;
+					list.push_back({l.inverted_site(neighbor_site(n, 2)), l.inverted_site(n)});
 				}
 		});
 		
-		l.generate_bond_map("nn_bond_3_inv", [&]
+		l.generate_bond_map("inv_nn_bond_3", [&]
 		(lattice::pair_vector_t& list)
 		{
-			int N = l.n_sites();
-
-			for (int i = 0; i < L; ++i)
-				for (int j = 0; j < L; ++j)
+			for (int j = 0; j < Ly; ++j)
+				for (int i = 0; i < Lx; ++i)
 				{
-					int x = 2 * i + 2 * L * j;
-					int y;
-					if (i == 0)
-						y = x + 2 * L - 1;
-					else
-						y = x - 1;
-					list.push_back({l.inverted_site(y % N), l.inverted_site(x % N)});
+					int n = j * 2 * Lx + i * 2;
+					list.push_back({l.inverted_site(neighbor_site(n, 1)), l.inverted_site(n)});
 				}
 		});
 	}

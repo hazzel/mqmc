@@ -44,6 +44,10 @@ class lattice
 			generate_distance_map();
 			real_space_map = generator.real_space_map;
 			coord_map = generator.coord_map;
+			
+			//std::cout << "n_bonds = " << n_bonds() << std::endl;
+			//std::cout << "Bonds:" << std::endl;
+			//print_bonds();
 		}
 
 		void generate_neighbor_map(const std::string& name,
@@ -156,6 +160,7 @@ class lattice
 		
 		vertex_t site_at_position(const Eigen::Vector2d& R) const
 		{
+			/*
 			for (int a = 0; a < 2; ++a)
 				for (int b = 0; b < 2; ++b)
 				{
@@ -168,21 +173,53 @@ class lattice
 					}
 				}
 			throw std::runtime_error("No lattice site at this position.");
+			*/
+			std::vector<double> fx, fy;
+			fx.push_back(0);
+			fy.push_back(0);
+			for (int i = 1; i <= Lx; ++i)
+			{
+				fx.push_back(i);
+				fx.push_back(-i);
+			}
+			for (int i = 1; i <= Ly; ++i)
+			{
+				fy.push_back(i);
+				fy.push_back(-i);
+			}
+			for (int a = 0; a < fx.size(); ++a)
+				for (int b = 0; b < fy.size(); ++b)
+				{
+					Eigen::Vector2d new_R = R + fx[a] * Lx * a1 + fy[b] * Ly * a2;
+					for (int i = 0; i < n_sites(); ++i)
+					{
+						auto& R_i = real_space_coord(i);
+						if ((new_R - R_i).norm() < std::pow(10., -12.))
+							return i;
+					}
+				}
+			throw std::runtime_error("No lattice site at this position.");
 		}
 		
 		bool is_lattice_site(const Eigen::Vector2d& R) const
 		{
-			std::vector<double> f;
-			f.push_back(0.);
-			for (int i = 1; i <= L; ++i)
+			std::vector<double> fx, fy;
+			fx.push_back(0);
+			fy.push_back(0);
+			for (int i = 1; i <= Lx; ++i)
 			{
-				f.push_back(i);
-				f.push_back(-i);
+				fx.push_back(i);
+				fx.push_back(-i);
 			}
-			for (int a = 0; a < f.size(); ++a)
-				for (int b = 0; b < f.size(); ++b)
+			for (int i = 1; i <= Ly; ++i)
+			{
+				fy.push_back(i);
+				fy.push_back(-i);
+			}
+			for (int a = 0; a < fx.size(); ++a)
+				for (int b = 0; b < fy.size(); ++b)
 				{
-					Eigen::Vector2d new_R = R + f[a] * L * a1 + f[b] * L * a2;
+					Eigen::Vector2d new_R = R + fx[a] * Lx * a1 + fy[b] * Ly * a2;
 					for (int i = 0; i < n_sites(); ++i)
 					{
 						auto& R_i = real_space_coord(i);
@@ -269,7 +306,8 @@ class lattice
 		Eigen::Vector2d b2;
 		// Vector to second sublattice point
 		Eigen::Vector2d delta;
-		int L;
+		int Lx;
+		int Ly;
 	private:
 		graph_t* graph;
 		int neighbor_dist;
