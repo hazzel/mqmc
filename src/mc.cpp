@@ -8,6 +8,7 @@
 #include "event_functors.h"
 #include "hex_honeycomb.h"
 #include "honeycomb.h"
+#include "tilted_honeycomb.h"
 #ifdef PROFILER
 	#include "gperftools/profiler.h"
 #endif
@@ -78,6 +79,12 @@ mc::mc(const std::string& dir)
 	if (config.param.geometry == "hex")
 	{
 		hex_honeycomb hc(config.param.Lx);
+		config.l.generate_graph(hc);
+		hc.generate_maps(config.l);
+	}
+	else if (config.param.geometry == "tilted")
+	{
+		tilted_honeycomb hc(config.param.Lx, config.param.Ly);
 		config.l.generate_graph(hc);
 		hc.generate_maps(config.l);
 	}

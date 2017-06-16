@@ -182,7 +182,7 @@ class fast_update
 						S_so.col(j) -= S_so.col(k) * (S_so.col(k).dot(S_s.col(j)));
 						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).dot(S_a.col(j)));
 					}
-					std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
+					//std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
 					if (S_so.col(j).norm() > epsilon)
 					{
 						S_so.col(j) /= S_so.col(j).norm();
@@ -270,8 +270,12 @@ class fast_update
 		void get_trial_wavefunction(const dmatrix_t& H)
 		{
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
-			if (l.n_sites() % 3 != 0)
+			if (l.n_sites() % 3 != 0 || param.Lx != param.Ly || param.geometry != "rhom")
 			{
+				std::cout << param.geometry << std::endl;
+				std::cout << n_matrix_size << " sites." << std::endl;
+				std::cout << solver.eigenvalues() << std::endl;
+			
 				P = solver.eigenvectors().leftCols(n_matrix_size/2);
 				Pt = P.adjoint();
 				return;

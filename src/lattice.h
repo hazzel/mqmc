@@ -28,7 +28,6 @@ class lattice
 		typedef std::map<std::string, nested_vector_t> neighbor_map_t;
 		typedef std::map<std::string, pair_vector_t> bond_map_t;
 		typedef std::vector<Eigen::Vector2d> real_space_map_t;
-		typedef std::vector<std::pair<int, int>> coord_map_t;
 		typedef std::map<std::string, Eigen::Vector2d> point_map_t;
 
 		lattice()
@@ -43,7 +42,6 @@ class lattice
 			graph = generator.graph();
 			generate_distance_map();
 			real_space_map = generator.real_space_map;
-			coord_map = generator.coord_map;
 			
 			//std::cout << "n_bonds = " << n_bonds() << std::endl;
 			//std::cout << "Bonds:" << std::endl;
@@ -304,8 +302,6 @@ class lattice
 		// Base vectors of reciprocal lattice
 		Eigen::Vector2d b1;
 		Eigen::Vector2d b2;
-		// Vector to second sublattice point
-		Eigen::Vector2d delta;
 		int Lx;
 		int Ly;
 	private:
@@ -316,6 +312,5 @@ class lattice
 		neighbor_map_t neighbor_maps;
 		bond_map_t bond_maps;
 		real_space_map_t real_space_map;
-		coord_map_t coord_map;
 		point_map_t symmetry_points;
 };
