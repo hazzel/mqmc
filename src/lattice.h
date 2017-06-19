@@ -232,7 +232,6 @@ class lattice
 		{
 			double pi = 4. * std::atan(1.);
 			Eigen::Rotation2D<double> rot(pi);
-			Eigen::Vector2d center = {1., 0.};
 			auto& R = real_space_coord(i) - center;
 			Eigen::Vector2d rot_R = rot * R + center;
 			return site_at_position(rot_R);
@@ -242,7 +241,6 @@ class lattice
 		{
 			double pi = 4. * std::atan(1.);
 			Eigen::Rotation2D<double> rot(angle / 180. * pi);
-			Eigen::Vector2d center = {1., 0.};
 			for (int i = 0; i < n_sites(); ++i)
 			{
 				auto& R = real_space_coord(i) - center;
@@ -302,6 +300,8 @@ class lattice
 		// Base vectors of reciprocal lattice
 		Eigen::Vector2d b1;
 		Eigen::Vector2d b2;
+		// Center of inversion symmetry
+		Eigen::Vector2d center;
 		int Lx;
 		int Ly;
 	private:

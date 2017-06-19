@@ -270,12 +270,8 @@ class fast_update
 		void get_trial_wavefunction(const dmatrix_t& H)
 		{
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
-			if (l.n_sites() % 3 != 0 || param.Lx != param.Ly || param.geometry != "rhom")
+			if (l.n_sites() % 3 != 0 || param.Lx != param.Ly)
 			{
-				std::cout << param.geometry << std::endl;
-				std::cout << n_matrix_size << " sites." << std::endl;
-				std::cout << solver.eigenvalues() << std::endl;
-			
 				P = solver.eigenvectors().leftCols(n_matrix_size/2);
 				Pt = P.adjoint();
 				return;
@@ -286,7 +282,19 @@ class fast_update
 			{
 				inv_pm(i, l.inverted_site(i)) = 1.;
 				ph_pm(i, i) = l.parity(i);
+				std::cout << i << " <-> " << l.inverted_site(i) << std::endl;
 			}
+			
+			if (param.geometry != "rhom")
+			{
+				std::cout << param.geometry << std::endl;
+				std::cout << n_matrix_size << " sites." << std::endl;
+				std::cout << solver.eigenvalues() << std::endl;
+				
+				//std::cout << "H - P * H * P" << std::endl;
+				//std::cout << H - inv_pm * H * inv_pm << std::endl;
+			}
+			
 			double epsilon = std::pow(10., -4.), total_inv_parity = 1, total_ph_parity = 1;
 			auto S_f = symmetrize_EV(solver.eigenvectors(), solver.eigenvalues(), inv_pm);
 			std::vector<double> inv_parity(n_matrix_size), ph_2p_parity(6);
@@ -321,15 +329,15 @@ class fast_update
 			ph_2p_block[0].col(1) = ph_1p_block.col(3);
 			ph_2p_block[1].col(0) = ph_1p_block.col(1);
 			ph_2p_block[1].col(1) = ph_1p_block.col(2);
-			ph_2p_block[2].col(0) = (ph_1p_block.col(0) - ph_1p_block.col(1))/std::sqrt(2.);
-			ph_2p_block[2].col(1) = (ph_1p_block.col(2) - ph_1p_block.col(3))/std::sqrt(2.);
+			//ph_2p_block[2].col(0) = (ph_1p_block.col(0) - ph_1p_block.col(1))/std::sqrt(2.);
+			//ph_2p_block[2].col(1) = (ph_1p_block.col(2) - ph_1p_block.col(3))/std::sqrt(2.);
 			//PH = -1
 			ph_2p_block[3].col(0) = ph_1p_block.col(0);
 			ph_2p_block[3].col(1) = ph_1p_block.col(1);
 			ph_2p_block[4].col(0) = ph_1p_block.col(2);
 			ph_2p_block[4].col(1) = ph_1p_block.col(3);
-			ph_2p_block[5].col(0) = (ph_1p_block.col(0) + ph_1p_block.col(1))/std::sqrt(2.);
-			ph_2p_block[5].col(1) = (ph_1p_block.col(2) + ph_1p_block.col(3))/std::sqrt(2.);
+			//ph_2p_block[5].col(0) = (ph_1p_block.col(0) + ph_1p_block.col(1))/std::sqrt(2.);
+			//ph_2p_block[5].col(1) = (ph_1p_block.col(2) + ph_1p_block.col(3))/std::sqrt(2.);
 			ph_2p_parity = {-1., -1., -1., 1., 1., 1.};
 			std::vector<double> inv_2p_parity;// = {-1., -1., -1., 1., 1., -1.};
 			inv_2p_parity.push_back(ph_2p_block[0].col(0).dot(inv_pm * ph_2p_block[0].col(0))
@@ -353,15 +361,13 @@ class fast_update
 				total_inv_parity *= inv_parity[i];
 				P.col(i) = S_f.col(i);
 			}
-			/*
 			for (int i = 0; i < ph_2p_block.size(); ++i)
 				std::cout << "i = " << i << ": E = 0, total invP = " << total_inv_parity*inv_2p_parity[i] << ", invP = " << inv_2p_parity[i] << ", phP = " << ph_2p_parity[i] << std::endl;
-			*/
 			int indices[] = {0, 1, 3, 4};
 			for (int i = 0; i < 4; ++i)
 				if (std::abs(total_inv_parity * inv_2p_parity[indices[i]] - param.inv_symmetry) < epsilon)
 				{
-					//std::cout << "Taken: i=" << indices[i] << std::endl;
+					std::cout << "Taken: i=" << indices[i] << std::endl;
 					P.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[indices[i]];
 					total_inv_parity *= inv_2p_parity[indices[i]];
 					break;

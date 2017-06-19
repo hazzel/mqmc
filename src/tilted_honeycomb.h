@@ -27,11 +27,13 @@ struct tilted_honeycomb
 	Eigen::Vector2d b2;
 	// Vector to second sublattice point
 	std::vector<Eigen::Vector2d> delta;
+	// Center of inversion symmetry
+	Eigen::Vector2d center;
 	double pi = 4. * std::atan(1.);
 
 	tilted_honeycomb(int Lx_ = 6, int Ly_ = 6)
 		: Lx(Lx_), Ly(Ly_),
-			a1(3., 0.), a2(3./2., 3.*std::sqrt(3.)/2.),
+			a1(3., 0.), a2(3./2., -3.*std::sqrt(3.)/2.),
 			d1(3./2., std::sqrt(3.)/2.), d2(3./2., -std::sqrt(3.)/2.)
 	{
 		b1 = Eigen::Vector2d(2.*pi/3., 2.*pi/std::sqrt(3.));
@@ -39,6 +41,7 @@ struct tilted_honeycomb
 		delta.push_back({1./2., -std::sqrt(3.)/2.});
 		delta.push_back({1./2., std::sqrt(3.)/2.});
 		delta.push_back({-1., 0.});
+		center = Eigen::Vector2d(1., 0.);
 	}
 	
 	int neighbor_site(int i, int j, int d, int type)
@@ -49,9 +52,9 @@ struct tilted_honeycomb
 		if (type == 0)
 		{
 			if (d == 0)
-				return (site - 6 * Lx + 3 + n_vertices) % n_vertices;
+				return (site + 6 * Lx * (Ly-1) + 5 + n_vertices) % n_vertices;
 			else if (d == 2)
-				return (site + 3 + n_vertices) % n_vertices;
+				return (site + 1 + n_vertices) % n_vertices;
 			else if (d == 4)
 			{
 				if (i == Lx - 1)
@@ -65,23 +68,23 @@ struct tilted_honeycomb
 			if (d == 0)
 			{
 				if (i == 0)
-					return (site + 6 * Lx - 1 + n_vertices) % n_vertices;
+					return (site + 6 * Lx - 3 + n_vertices) % n_vertices;
 				else
-					return (site - 1 + n_vertices) % n_vertices;
+					return (site - 3 + n_vertices) % n_vertices;
 			}
 			else if (d == 2)
 				return (site - 1 + n_vertices) % n_vertices;
 			else if (d == 4)
-				return (site - 1 + n_vertices) % n_vertices;
+				return (site + 1 + n_vertices) % n_vertices;
 		}
 		else if (type == 2)
 		{
 			if (d == 0)
 				return (site + 1 + n_vertices) % n_vertices;
 			else if (d == 2)
-				return (site + 1 + n_vertices) % n_vertices;
+				return (site + 3 + n_vertices) % n_vertices;
 			else if (d == 4)
-				return (site + 6 * Lx + 1 + n_vertices) % n_vertices;
+				return (site + 6 * Lx - 1 + n_vertices) % n_vertices;
 		}
 	}
 
@@ -141,6 +144,7 @@ struct tilted_honeycomb
 		l.a2 = a2;
 		l.b1 = b1;
 		l.b2 = b2;
+		l.center = center;
 		l.Lx = Lx;
 		l.Ly = Ly;
 	

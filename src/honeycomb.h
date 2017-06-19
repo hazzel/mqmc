@@ -25,6 +25,8 @@ struct honeycomb
 	Eigen::Vector2d b2;
 	// Vector to second sublattice point
 	Eigen::Vector2d delta;
+	// Center of inversion symmetry
+	Eigen::Vector2d center;
 	double pi = 4. * std::atan(1.);
 
 	honeycomb(int Lx_ = 6, int Ly_ = 6)
@@ -34,6 +36,7 @@ struct honeycomb
 	{
 		b1 = Eigen::Vector2d(2.*pi/3., 2.*pi/std::sqrt(3.));
 		b2 = Eigen::Vector2d(2.*pi/3., -2.*pi/std::sqrt(3.));
+		center = Eigen::Vector2d(1., 0.);
 	}
 	
 	int neighbor_site(int site, int type)
@@ -112,6 +115,7 @@ struct honeycomb
 		l.a2 = a2;
 		l.b1 = b1;
 		l.b2 = b2;
+		l.center = center;
 		l.Lx = Lx;
 		l.Ly = Ly;
 	
