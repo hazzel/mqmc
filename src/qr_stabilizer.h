@@ -11,13 +11,10 @@
 #include "parameters.h"
 #include "Random.h"
 
-template<typename numeric_t>
+template<typename numeric_t, typename dmatrix_t>
 class qr_stabilizer
 {
 	public:
-		template<int n, int m>
-		using matrix_t = Eigen::Matrix<numeric_t, n, m>;
-		using dmatrix_t = matrix_t<Eigen::Dynamic, Eigen::Dynamic>;
 		using diag_matrix_t = Eigen::DiagonalMatrix<numeric_t, Eigen::Dynamic>;
 
 		qr_stabilizer(measurements& measure_,

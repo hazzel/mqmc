@@ -34,10 +34,13 @@ class fast_update
 		//using numeric_t = std::complex<double>;
 		using numeric_t = double;
 		template<int n, int m>
-		using matrix_t = Eigen::Matrix<numeric_t, n, m,
-			Eigen::ColMajor>;
+		using matrix_t = Eigen::Matrix<numeric_t, n, m, Eigen::ColMajor>;
 		using dmatrix_t = matrix_t<Eigen::Dynamic, Eigen::Dynamic>;
-		using stabilizer_t = qr_stabilizer<numeric_t>;
+		using stabilizer_t = qr_stabilizer<numeric_t, dmatrix_t>;
+		using row_matrix_t = Eigen::Matrix<numeric_t, Eigen::Dynamic,
+			Eigen::Dynamic, Eigen::RowMajor>;
+		using col_matrix_t = Eigen::Matrix<numeric_t, Eigen::Dynamic,
+			Eigen::Dynamic, Eigen::ColMajor>;
 
 		fast_update(Random& rng_, const lattice& l_, parameters& param_,
 			measurements& measure_)
@@ -282,7 +285,7 @@ class fast_update
 			{
 				inv_pm(i, l.inverted_site(i)) = 1.;
 				ph_pm(i, i) = l.parity(i);
-				std::cout << i << " <-> " << l.inverted_site(i) << std::endl;
+				//std::cout << i << " <-> " << l.inverted_site(i) << std::endl;
 			}
 			
 			if (param.geometry != "rhom")
@@ -840,10 +843,15 @@ class fast_update
 				proj_W_r.row(indices[0]).noalias() += delta_W_r.row(0);
 				proj_W_r.row(indices[1]).noalias() += delta_W_r.row(1);
 
+				/*
 				M = M.inverse().eval();
 				dmatrix_t delta_W_r_W = delta_W_r * proj_W;
 				dmatrix_t W_W_l_M = W_W_l * M;
 				proj_W.noalias() -= W_W_l_M * delta_W_r_W;
+				*/
+				
+				M = M.inverse().eval();
+				proj_W.noalias() -= (W_W_l * M) * (delta_W_r * proj_W);
 			}
 			else
 			{
