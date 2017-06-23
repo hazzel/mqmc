@@ -25,6 +25,8 @@ struct hex_honeycomb
 	Eigen::Vector2d b2;
 	// Vector to second sublattice point
 	Eigen::Vector2d delta;
+	// Center of inversion symmetry
+	Eigen::Vector2d center;
 	double pi = 4. * std::atan(1.);
 
 	hex_honeycomb(int L_ = 6)
@@ -34,6 +36,7 @@ struct hex_honeycomb
 	{
 		b1 = Eigen::Vector2d(2.*pi/3., 2.*pi/std::sqrt(3.));
 		b2 = Eigen::Vector2d(2.*pi/3., -2.*pi/std::sqrt(3.));
+		center = Eigen::Vector2d(1., 0.);
 	}
 
 	graph_t* graph()
@@ -90,6 +93,14 @@ struct hex_honeycomb
 
 	void generate_maps(lattice& l)
 	{
+		l.a1 = a1;
+		l.a2 = a2;
+		l.b1 = b1;
+		l.b2 = b2;
+		l.center = center;
+		l.Lx = L;
+		l.Ly = L;
+		
 		//Symmetry points
 		std::map<std::string, Eigen::Vector2d> points;
 

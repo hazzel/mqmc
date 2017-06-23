@@ -273,7 +273,16 @@ class fast_update
 		void get_trial_wavefunction(const dmatrix_t& H)
 		{
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
-			if (l.n_sites() % 3 != 0 || param.Lx != param.Ly)
+			if (param.geometry != "rhom")
+			{
+				std::cout << param.geometry << std::endl;
+				std::cout << n_matrix_size << " sites." << std::endl;
+				std::cout << solver.eigenvalues() << std::endl;
+				
+				//std::cout << "H - P * H * P" << std::endl;
+				//std::cout << H - inv_pm * H * inv_pm << std::endl;
+			}
+			if (l.n_sites() % 3 != 0)
 			{
 				P = solver.eigenvectors().leftCols(n_matrix_size/2);
 				Pt = P.adjoint();
@@ -286,16 +295,6 @@ class fast_update
 				inv_pm(i, l.inverted_site(i)) = 1.;
 				ph_pm(i, i) = l.parity(i);
 				//std::cout << i << " <-> " << l.inverted_site(i) << std::endl;
-			}
-			
-			if (param.geometry != "rhom")
-			{
-				std::cout << param.geometry << std::endl;
-				std::cout << n_matrix_size << " sites." << std::endl;
-				std::cout << solver.eigenvalues() << std::endl;
-				
-				//std::cout << "H - P * H * P" << std::endl;
-				//std::cout << H - inv_pm * H * inv_pm << std::endl;
 			}
 			
 			double epsilon = std::pow(10., -4.), total_inv_parity = 1, total_ph_parity = 1;
@@ -1191,16 +1190,16 @@ class fast_update
 				}
 			}
 			
-			nn_bonds.resize(3);
-			for (int b = 0; b < 3; ++b)
+			nn_bonds.resize(cb_bonds.size());
+			for (int b = 0; b < nn_bonds.size(); ++b)
 				for (int i = 0; i < l.n_sites(); ++i)
 				{
 					int j = cb_bonds[b][i];
 					if (i > j) continue;
 					nn_bonds[b].push_back({i, j});
 				}
-			inv_nn_bonds.resize(3);
-			for (int b = 0; b < 3; ++b)
+			inv_nn_bonds.resize(nn_bonds.size());
+			for (int b = 0; b < nn_bonds.size(); ++b)
 				for (int i = nn_bonds[b].size() - 1; i >= 0; --i)
 					inv_nn_bonds[b].push_back(nn_bonds[b][i]);
 		}
