@@ -185,7 +185,7 @@ class fast_update
 						S_so.col(j) -= S_so.col(k) * (S_so.col(k).dot(S_s.col(j)));
 						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).dot(S_a.col(j)));
 					}
-					std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
+					//std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
 					if (S_so.col(j).norm() > epsilon)
 					{
 						S_so.col(j) /= S_so.col(j).norm();
@@ -363,13 +363,13 @@ class fast_update
 				total_inv_parity *= inv_parity[i];
 				P.col(i) = S_f.col(i);
 			}
-			for (int i = 0; i < ph_2p_block.size(); ++i)
-				std::cout << "i = " << i << ": E = 0, total invP = " << total_inv_parity*inv_2p_parity[i] << ", invP = " << inv_2p_parity[i] << ", phP = " << ph_2p_parity[i] << std::endl;
+			//for (int i = 0; i < ph_2p_block.size(); ++i)
+			//	std::cout << "i = " << i << ": E = 0, total invP = " << total_inv_parity*inv_2p_parity[i] << ", invP = " << inv_2p_parity[i] << ", phP = " << ph_2p_parity[i] << std::endl;
 			int indices[] = {0, 1, 3, 4};
 			for (int i = 0; i < 4; ++i)
 				if (std::abs(total_inv_parity * inv_2p_parity[indices[i]] - param.inv_symmetry) < epsilon)
 				{
-					std::cout << "Taken: i=" << indices[i] << std::endl;
+					//std::cout << "Taken: i=" << indices[i] << std::endl;
 					P.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[indices[i]];
 					total_inv_parity *= inv_2p_parity[indices[i]];
 					break;
