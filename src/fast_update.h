@@ -185,7 +185,7 @@ class fast_update
 						S_so.col(j) -= S_so.col(k) * (S_so.col(k).dot(S_s.col(j)));
 						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).dot(S_a.col(j)));
 					}
-					//std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
+					std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
 					if (S_so.col(j).norm() > epsilon)
 					{
 						S_so.col(j) /= S_so.col(j).norm();
@@ -391,7 +391,7 @@ class fast_update
 				int as = alpha * l.n_sites();
 				for (auto& a : l.bonds("nearest neighbors"))
 					H0(a.first+as, a.second+as) = -param.t;
-				for (auto& a : l.bonds("d3_bonds"))
+				for (auto& a : l.bonds("t3_bonds"))
 					H0(a.first+as, a.second+as) = -param.tprime;
 				for (int i = 0; i < l.n_sites(); ++i)
 					H0(i+as, i+as) = l.parity(i) * param.stag_mu + param.mu;
@@ -403,7 +403,7 @@ class fast_update
 			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 			{
 				int as = alpha * l.n_sites();
-				for (auto& a : l.bonds("d3_bonds"))
+				for (auto& a : l.bonds("t3_bonds"))
 					H0(a.first+as, a.second+as) = -param.tprime;
 				for (int i = 0; i < l.n_sites(); ++i)
 					H0(i+as, i+as) = l.parity(i) * param.stag_mu + param.mu;

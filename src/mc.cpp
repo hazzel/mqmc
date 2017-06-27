@@ -78,8 +78,6 @@ mc::mc(const std::string& dir)
 	//Initialize lattice
 	if (config.param.geometry == "hex")
 	{
-		config.param.Lx = 1;
-		config.param.Ly = 1;
 		hex_honeycomb hc(config.param.Lx);
 		config.l.generate_graph(hc);
 		hc.generate_maps(config.l);
