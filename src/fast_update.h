@@ -273,6 +273,7 @@ class fast_update
 		void get_trial_wavefunction(const dmatrix_t& H)
 		{
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
+			/*
 			if (param.geometry != "rhom")
 			{
 				std::cout << param.geometry << std::endl;
@@ -282,6 +283,7 @@ class fast_update
 				//std::cout << "H - P * H * P" << std::endl;
 				//std::cout << H - inv_pm * H * inv_pm << std::endl;
 			}
+			*/
 			if (l.n_sites() % 3 != 0)
 			{
 				P = solver.eigenvectors().leftCols(n_matrix_size/2);
