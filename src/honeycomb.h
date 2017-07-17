@@ -302,14 +302,12 @@ struct honeycomb
 					int y = x + 2 * Lx;
 					list.push_back({x % N, y % N});
 	
-					x = 2 * i + 2 * Lx * j;
 					if (i == Lx - 1)
 						y = x - 2 * (Lx - 1);
 					else
 						y = x + 2;
 					list.push_back({(y+N) % N, x % N});
 				
-					x = 2 * i + 2 * Lx * j;
 					if (i == 0)
 						y = x + 4 * Lx - 2;
 					else
@@ -335,14 +333,12 @@ struct honeycomb
 					int y = x + 2 * Lx;
 					list.push_back({y % N, x % N});
 	
-					x = 2 * i + 1 + 2 * Lx * j;
 					if (i == Lx - 1)
 						y = x - 2 * (Lx - 1);
 					else
 						y = x + 2;
 					list.push_back({x % N, (y+N) % N});
 				
-					x = 2 * i + 1 + 2 * Lx * j;
 					if (i == 0)
 						y = x + 4 * Lx - 2;
 					else

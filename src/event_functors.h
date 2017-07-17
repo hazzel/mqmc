@@ -176,6 +176,14 @@ struct event_static_measurement
 				add_wick(wick_static_chern2{config, rng});
 			else if (observables[i] == "S_chern_q")
 				add_wick(wick_static_S_chern_q{config, rng});
+			else if (observables[i] == "chernAA")
+				add_wick(wick_static_chernAA{config, rng, config.l.bonds("chern")});
+			else if (observables[i] == "S_chernAA_q")
+				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern")});
+			else if (observables[i] == "chernBB")
+				add_wick(wick_static_chernAA{config, rng, config.l.bonds("chern_2")});
+			else if (observables[i] == "S_chernBB_q")
+				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern_2")});
 			else if (observables[i] == "chern4")
 				add_wick(wick_static_chern4{config, rng});
 

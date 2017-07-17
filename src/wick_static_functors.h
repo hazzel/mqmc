@@ -274,6 +274,70 @@ struct wick_static_S_chern_q
 	}
 };
 
+struct wick_static_chernAA
+{
+	configuration& config;
+	Random& rng;
+	const std::vector<std::pair<int, int>>& bonds;
+
+	wick_static_chernAA(configuration& config_, Random& rng_, const std::vector<std::pair<int, int>>& bonds_)
+		: config(config_), rng(rng_), bonds(bonds_)
+	{}
+	
+	double get_obs(const matrix_t& et_gf)
+	{
+		const numeric_t *ca_et_gf_0 = et_gf.data();
+		numeric_t ch = 0.;
+		const int N = bonds.size(), ns = config.l.n_sites();
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
+			{
+				auto& a = bonds[i];
+				auto& b = bonds[j];
+				ch -= 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first]);
+			}
+		return std::real(ch) / std::pow(config.l.n_bonds(), 2);
+	}
+};
+
+struct wick_static_S_chernAA_q
+{
+	configuration& config;
+	Random& rng;
+	const std::vector<std::pair<int, int>>& bonds;
+
+	wick_static_S_chernAA_q(configuration& config_, Random& rng_, const std::vector<std::pair<int, int>>& bonds_)
+		: config(config_), rng(rng_), bonds(bonds_)
+	{}
+	
+	double get_obs(const matrix_t& et_gf)
+	{
+		const numeric_t *ca_et_gf_0 = et_gf.data();
+		numeric_t ch = 0.;
+		auto& q = config.l.symmetry_point("q");
+		const int N = bonds.size(), ns = config.l.n_sites();
+		for (int i = 0; i < N; ++i)
+		{
+			auto& a = bonds[i];
+			auto& r_i = config.l.real_space_coord(a.first);
+			for (int j = 0; j < N; ++j)
+			{
+				auto& b = bonds[j];
+				auto& r_j = config.l.real_space_coord(b.first);
+				double qr = q.dot(r_i - r_j);
+				ch -= 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+					- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first])*std::cos(qr);
+			}
+		}
+		return std::real(ch) / std::pow(config.l.n_bonds(), 2);
+	}
+};
+
 struct wick_static_chern4
 {
 	configuration& config;
