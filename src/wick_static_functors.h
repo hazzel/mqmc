@@ -308,10 +308,24 @@ struct wick_static_S_chernAA_q
 	configuration& config;
 	Random& rng;
 	const std::vector<std::pair<int, int>>& bonds;
+	std::vector<Eigen::Vector2d> hexagon_pos;
 
-	wick_static_S_chernAA_q(configuration& config_, Random& rng_, const std::vector<std::pair<int, int>>& bonds_)
+	wick_static_S_chernAA_q(configuration& config_, Random& rng_,
+		const std::vector<std::pair<int, int>>& bonds_)
 		: config(config_), rng(rng_), bonds(bonds_)
-	{}
+	{
+		const int N = bonds.size();
+		for (int i = 0; i < N; i+=3)
+		{
+			Eigen::Vector2d r = {0., 0.};
+			for (int j = 0; j < 3; ++j)
+			{
+				r += config.l.real_space_coord(bonds[i+j].first);
+				r += config.l.real_space_coord(bonds[i+j].second);
+			}
+			hexagon_pos.push_back(r / 6.);
+		}
+	}
 	
 	double get_obs(const matrix_t& et_gf)
 	{
@@ -322,11 +336,11 @@ struct wick_static_S_chernAA_q
 		for (int i = 0; i < N; ++i)
 		{
 			auto& a = bonds[i];
-			auto& r_i = config.l.real_space_coord(a.first);
+			auto& r_i = hexagon_pos[i/3];
 			for (int j = 0; j < N; ++j)
 			{
 				auto& b = bonds[j];
-				auto& r_j = config.l.real_space_coord(b.first);
+				auto& r_j = hexagon_pos[j/3];
 				double qr = q.dot(r_i - r_j);
 				ch -= 2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
 					+ ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
@@ -621,10 +635,10 @@ struct wick_static_S_cdw_q
 		const int N = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
 		{
-			auto& r_i = config.l.real_space_coord(i);
+			auto& r_i = config.l.real_space_coord((i/2)*2);
 			for (int j = 0; j < N; ++j)
 			{
-				auto& r_j = config.l.real_space_coord(j);
+				auto& r_j = config.l.real_space_coord((j/2)*2);
 				double qr = q.dot(r_i - r_j);
 				S += ca_et_gf_0[j * N + i] * ca_et_gf_0[j * N + i] * std::cos(qr);
 			}

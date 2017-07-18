@@ -573,10 +573,10 @@ struct wick_sp
 		const int N = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
 		{
-			auto& r_i = config.l.real_space_coord(i);
+			auto& r_i = config.l.real_space_coord(i/2*2);
 			for (int j = 0; j < N; ++j)
 			{
-				auto& r_j = config.l.real_space_coord(j);
+				auto& r_j = config.l.real_space_coord(j/2*2);
 				double kdot = K.dot(r_i - r_j);
 			
 				sp += std::cos(kdot) * td_gf(i, j);
