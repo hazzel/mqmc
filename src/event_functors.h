@@ -179,11 +179,17 @@ struct event_static_measurement
 			else if (observables[i] == "chernAA")
 				add_wick(wick_static_chernAA{config, rng, config.l.bonds("chern")});
 			else if (observables[i] == "S_chernAA_q")
-				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern")});
+			{
+				Eigen::Vector2d delta = {1., 0};
+				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern"), delta});
+			}
 			else if (observables[i] == "chernBB")
 				add_wick(wick_static_chernAA{config, rng, config.l.bonds("chern_2")});
 			else if (observables[i] == "S_chernBB_q")
-				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern_2")});
+			{
+				Eigen::Vector2d delta = {0.5, -std::sqrt(3.)/2.};
+				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern_2"), delta});
+			}
 			else if (observables[i] == "chern4")
 				add_wick(wick_static_chern4{config, rng});
 

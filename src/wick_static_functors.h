@@ -309,21 +309,17 @@ struct wick_static_S_chernAA_q
 	Random& rng;
 	const std::vector<std::pair<int, int>>& bonds;
 	std::vector<Eigen::Vector2d> hexagon_pos;
+	Eigen::Vector2d delta;
 
 	wick_static_S_chernAA_q(configuration& config_, Random& rng_,
-		const std::vector<std::pair<int, int>>& bonds_)
-		: config(config_), rng(rng_), bonds(bonds_)
+		const std::vector<std::pair<int, int>>& bonds_, const Eigen::Vector2d& delta_)
+		: config(config_), rng(rng_), bonds(bonds_), delta(delta_)
 	{
 		const int N = bonds.size();
 		for (int i = 0; i < N; i+=3)
 		{
-			Eigen::Vector2d r = {0., 0.};
-			for (int j = 0; j < 3; ++j)
-			{
-				r += config.l.real_space_coord(bonds[i+j].first);
-				r += config.l.real_space_coord(bonds[i+j].second);
-			}
-			hexagon_pos.push_back(r / 6.);
+			Eigen::Vector2d r = config.l.real_space_coord(bonds[i].first) + delta;
+			hexagon_pos.push_back(r);
 		}
 	}
 	

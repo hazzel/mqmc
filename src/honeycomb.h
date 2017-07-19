@@ -336,20 +336,22 @@ struct honeycomb
 				for (int j = 0; j < Ly; ++j)
 				{
 					int x = 2 * i + 1 + 2 * Lx * j;
-					int y = x + 2 * Lx;
-					list.push_back({y % N, x % N});
-	
+					int y;
+					
 					if (i == 0)
 						y = x + 4 * Lx - 2;
 					else
 						y = x + 2 * (Lx - 1);
 					list.push_back({x % N, y % N});
 					
+					y = x + 2 * Lx;
+					list.push_back({y % N, x % N});
+					
 					x = (2 * i + 1 + 2 * Lx * (j + 1)) % N;
 					if (i == 0)
 						y = x + 2 * (Lx - 1);
 					else
-						y = x + 2;
+						y = x - 2;
 					list.push_back({y % N, x % N});
 				}
 		});
