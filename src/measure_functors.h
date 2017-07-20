@@ -95,8 +95,8 @@ struct measure_M
 		config.measure.add_evalable("B_cdw", "M2", "M4", eval_B_cdw);
 		config.measure.add_evalable("R_cdw", "M2", "S_cdw_q", eval_R_cdw);
 		config.measure.add_evalable("B_chern", "chern2", "chern4", eval_B_chern);
-		config.measure.add_evalable("R_chernAA", "chernAA", "S_chernAA_q", eval_R_chern);
-		config.measure.add_evalable("R_chernBB", "chernBB", "S_chernBB_q", eval_R_chern);
+		//config.measure.add_evalable("R_chernAA", "chernAA", "S_chernAA_q", eval_R_chern);
+		//config.measure.add_evalable("R_chernBB", "chernBB", "S_chernBB_q", eval_R_chern);
 		
 		//if (config.param.mu != 0 || config.param.stag_mu != 0)
 			//config.measure.add_evalable("n_jack", "sign_phase_re", "sign_phase_im", "n_re", "n_im", eval_n);

@@ -165,6 +165,10 @@ void mc::init()
 	config.measure.add_observable("chern2", n_prebin);
 	config.measure.add_observable("S_chern_q", n_prebin);
 	config.measure.add_observable("chern4", n_prebin);
+	config.measure.add_observable("chernAA", n_prebin);
+	config.measure.add_observable("S_chernAA_q", n_prebin);
+	config.measure.add_observable("chernBB", n_prebin);
+	config.measure.add_observable("S_chernBB_q", n_prebin);
 	config.measure.add_vectorobservable("corr", config.l.max_distance() + 1,
 		n_prebin);
 	n_prebin /= config.param.n_tau_slices / 8 / n_static_cycles;
