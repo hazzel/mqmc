@@ -568,6 +568,7 @@ struct wick_sp
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
+		const numeric_t *ca_td_gf = td_gf.data();
 		numeric_t sp = 0.;
 		auto& K = config.l.symmetry_point("K");
 		const int N = config.l.n_sites();
@@ -578,8 +579,7 @@ struct wick_sp
 			{
 				auto& r_j = config.l.real_space_coord(j/2*2);
 				double kdot = K.dot(r_i - r_j);
-			
-				sp += std::cos(kdot) * td_gf(i, j);
+				sp += std::cos(kdot) * ca_td_gf[j*N+i];
 			}
 		}
 		return std::real(sp);
@@ -600,26 +600,32 @@ struct wick_tp
 	double get_obs(const matrix_t& et_gf_0, const matrix_t& et_gf_t,
 		const matrix_t& td_gf)
 	{
+		const numeric_t *ca_td_gf = td_gf.data();
 		numeric_t tp = 0.;
 		auto& K = config.l.symmetry_point("K");
-		/*
-		std::vector<std::complex<double>> unique_values;
-		std::vector<std::array<int, 4>> unique_sites;
+		const int N = config.l.n_sites();
 		
-		for (int i = 0; i < config.l.n_sites(); ++i)
-			for (int j = 0; j < config.l.n_sites(); ++j)
-				for (int k = 0; k < config.l.n_sites(); ++k)
-					for (int l = 0; l < config.l.n_sites(); ++l)
+		//std::vector<numeric_t> unique_values;
+		//std::vector<std::array<int, 4>> unique_sites;
+		
+		//for (int i = 0; i < N; ++i)
+		int i = rng() * N;
+		{
+			auto& r_i = config.l.real_space_coord(i/2*2);
+			for (int j = 0; j < N; ++j)
+			{
+				auto& r_j = config.l.real_space_coord(j/2*2);
+				for (int k = 0; k < N; ++k)
+				{
+					auto& r_k = config.l.real_space_coord(k/2*2);
+					for (int l = 0; l < N; ++l)
 					{
-						auto& r_i = config.l.real_space_coord(i);
-						auto& r_j = config.l.real_space_coord(j);
-						auto& r_k = config.l.real_space_coord(k);
-						auto& r_l = config.l.real_space_coord(l);
-						int x = i % (2*config.l.L);
-						int y = i / (2*config.l.L);
+						auto& r_l = config.l.real_space_coord(l/2*2);
 						double kdot = K.dot(r_i - r_j + r_k - r_l);
-						
-						std::complex<double> x = std::cos(kdot) * (td_gf(i, l) * td_gf(j, k) - td_gf(i, k) * td_gf(j, l));
+						tp += std::cos(kdot) * (ca_td_gf[i*N+l] * ca_td_gf[j*N+k] - ca_td_gf[i*N+k] * ca_td_gf[j*N+l])
+							* config.l.parity(i) * config.l.parity(j) * config.l.parity(k) * config.l.parity(l);
+						/*
+						numeric_t x = std::cos(kdot) * (td_gf(l, i) * td_gf(k, j) - td_gf(k, i) * td_gf(l, j));
 						tp += x;
 						bool exists = false;
 						for (int a = 0; a < unique_values.size(); ++a)
@@ -633,11 +639,15 @@ struct wick_tp
 							unique_values.push_back(x);
 							unique_sites.push_back({i, j, k, l});
 						}
+						*/
 					}
-		std::cout << unique_values.size() << " of " << std::pow(config.l.n_sites(), 4) << std::endl;
-		for (auto& i : unique_sites)
-			std::cout << i[0] << ", " << i[1] << ", " << i[2] << ", " << i[3] << std::endl;
-		*/
-		return std::real(tp);
+				}
+			}
+		}
+		//std::cout << unique_values.size() << " of " << std::pow(config.l.n_sites(), 4) << std::endl;
+		//for (auto& i : unique_sites)
+		//	std::cout << i[0] << ", " << i[1] << ", " << i[2] << ", " << i[3] << std::endl;
+		
+		return std::real(tp*N);
 	}
 };
