@@ -8,6 +8,8 @@
 #include "wick_functors.h"
 #include "wick_static_base.h"
 #include "wick_static_functors.h"
+#include "vector_wick_static_base.h"
+#include "vector_wick_static_functors.h"
 
 struct event_build
 {
@@ -139,78 +141,89 @@ struct event_static_measurement
 
 	configuration& config;
 	Random& rng;
-	std::vector<double> values;
 	std::vector<wick_static_base<matrix_t>> obs;
+	std::vector<vector_wick_static_base<matrix_t>> vec_obs;
 	std::vector<std::string> names;
+	std::vector<std::string> vec_names;
 
 	event_static_measurement(configuration& config_, Random& rng_,
 		int n_prebin, const std::vector<std::string>& observables)
 		: config(config_), rng(rng_)
 	{
 		obs.reserve(100);
+		vec_obs.reserve(100);
 		for (int i = 0; i < observables.size(); ++i)
 		{
-			values.push_back(0.);
-
 			if (observables[i] == "energy")
-				add_wick(wick_static_energy{config, rng});
+				add_wick(wick_static_energy{config, rng}, observables[i]);
 			else if (observables[i] == "h_t")
-				add_wick(wick_static_h_t{config, rng});
+				add_wick(wick_static_h_t{config, rng}, observables[i]);
 			else if (observables[i] == "h_v")
-				add_wick(wick_static_h_v{config, rng});
+				add_wick(wick_static_h_v{config, rng}, observables[i]);
 			else if (observables[i] == "h_mu")
-				add_wick(wick_static_h_mu{config, rng});
+				add_wick(wick_static_h_mu{config, rng}, observables[i]);
 			else if (observables[i] == "M2")
-				add_wick(wick_static_M2{config, rng});
+				add_wick(wick_static_M2{config, rng}, observables[i]);
 			else if (observables[i] == "S_cdw_q")
-				add_wick(wick_static_S_cdw_q{config, rng});
+				add_wick(wick_static_S_cdw_q{config, rng}, observables[i]);
 			else if (observables[i] == "M4")
-				add_wick(wick_static_M4{config, rng});
+				add_wick(wick_static_M4{config, rng}, observables[i]);
 			else if (observables[i] == "epsilon")
-				add_wick(wick_static_epsilon{config, rng});
+				add_wick(wick_static_epsilon{config, rng}, observables[i]);
 			else if (observables[i] == "epsilon_V")
-				add_wick(wick_static_epsilon_V{config, rng});
+				add_wick(wick_static_epsilon_V{config, rng}, observables[i]);
 			else if (observables[i] == "kekule")
-				add_wick(wick_static_kek{config, rng});
+				add_wick(wick_static_kek{config, rng}, observables[i]);
 			else if (observables[i] == "chern2")
-				add_wick(wick_static_chern2{config, rng});
+				add_wick(wick_static_chern2{config, rng}, observables[i]);
 			else if (observables[i] == "S_chern_q")
-				add_wick(wick_static_S_chern_q{config, rng});
+				add_wick(wick_static_S_chern_q{config, rng}, observables[i]);
 			else if (observables[i] == "chernAA")
-				add_wick(wick_static_chernAA{config, rng, config.l.bonds("chern")});
+				add_wick(wick_static_chernAA{config, rng, config.l.bonds("chern")}, observables[i]);
 			else if (observables[i] == "S_chernAA_q")
 			{
 				Eigen::Vector2d delta = {1., 0};
-				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern"), delta});
+				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern"), delta}, observables[i]);
 			}
 			else if (observables[i] == "chernBB")
-				add_wick(wick_static_chernAA{config, rng, config.l.bonds("chern_2")});
+				add_wick(wick_static_chernAA{config, rng, config.l.bonds("chern_2")}, observables[i]);
 			else if (observables[i] == "S_chernBB_q")
 			{
 				Eigen::Vector2d delta = {0.5, -std::sqrt(3.)/2.};
-				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern_2"), delta});
+				add_wick(wick_static_S_chernAA_q{config, rng, config.l.bonds("chern_2"), delta}, observables[i]);
+			}
+			else if (observables[i] == "S_chernAA")
+			{
+				Eigen::Vector2d delta = {1., 0};
+				add_vector_wick(wick_static_S_chernAA{config, rng, config.l.bonds("chern"), delta}, observables[i]);
+			}
+			else if (observables[i] == "S_chernBB")
+			{
+				Eigen::Vector2d delta = {0.5, -std::sqrt(3.)/2.};
+				add_vector_wick(wick_static_S_chernAA{config, rng, config.l.bonds("chern_2"), delta}, observables[i]);
 			}
 			else if (observables[i] == "chern4")
-				add_wick(wick_static_chern4{config, rng});
-
-			names.push_back(observables[i]);
+				add_wick(wick_static_chern4{config, rng}, observables[i]);
 		}
 	}
 
 	template<typename T>
-	void add_wick(T&& functor)
+	void add_wick(T&& functor, const std::string& name)
 	{
 		obs.push_back(wick_static_base<matrix_t>(std::forward<T>(functor)));
+		names.push_back(name);
+	}
+	
+	template<typename T>
+	void add_vector_wick(T&& functor, const std::string& name)
+	{
+		vec_obs.push_back(vector_wick_static_base<matrix_t>(std::forward<T>(functor)));
+		vec_names.push_back(name);
 	}
 
 	void trigger()
 	{
-		std::fill(values.begin(), values.end(), 0.);
-		config.M.measure_static_observable(values, obs);
-
-		for (int i = 0; i < values.size(); ++i)
-			config.measure.add(names[i], values[i]);
-
+		config.M.measure_static_observable(names, obs, vec_names, vec_obs);
 		config.measure.add("sign_phase_re", std::real(config.param.sign_phase));
 		config.measure.add("sign_phase_im", std::imag(config.param.sign_phase));
 	}

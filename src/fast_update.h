@@ -13,6 +13,7 @@
 #include "qr_stabilizer.h"
 #include "wick_base.h"
 #include "wick_static_base.h"
+#include "vector_wick_static_base.h"
 
 template <class data_t, class index_t>
 class SortIndicesInc
@@ -904,8 +905,10 @@ class fast_update
 		}
 		*/
 
-		void measure_static_observable(std::vector<double>& values,
-			const std::vector<wick_static_base<dmatrix_t>>& obs)
+		void measure_static_observable(const std::vector<std::string>& names,
+			const std::vector<wick_static_base<dmatrix_t>>& obs,
+			const std::vector<std::string>& vec_names,
+			const std::vector<vector_wick_static_base<dmatrix_t>>& vec_obs)
 		{
 			if (param.use_projector)
 			{
@@ -913,8 +916,10 @@ class fast_update
 				equal_time_gf = id;
 				equal_time_gf.noalias() -= proj_W_r * wl;
 			}
-			for (int i = 0; i < values.size(); ++i)
-					values[i] = obs[i].get_obs(equal_time_gf);
+			for (int i = 0; i < names.size(); ++i)
+				measure.add(names[i], obs[i].get_obs(equal_time_gf));
+			for (int i = 0; i < vec_names.size(); ++i)
+				measure.add(vec_names[i], vec_obs[i].get_obs(equal_time_gf));
 
 			if (param.mu != 0 || param.stag_mu != 0)
 			{
