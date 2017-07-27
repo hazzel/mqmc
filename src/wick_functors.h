@@ -609,37 +609,40 @@ struct wick_tp
 		//std::vector<std::array<int, 4>> unique_sites;
 		
 		//for (int i = 0; i < N; ++i)
-		int i = rng() * N;
+		for (int n = 0; n < 10; ++n)
 		{
-			auto& r_i = config.l.real_space_coord(i/2*2);
-			for (int j = 0; j < N; ++j)
+			int i = rng() * N;
 			{
-				auto& r_j = config.l.real_space_coord(j/2*2);
-				for (int k = 0; k < N; ++k)
+				auto& r_i = config.l.real_space_coord(i/2*2);
+				for (int j = 0; j < N; ++j)
 				{
-					auto& r_k = config.l.real_space_coord(k/2*2);
-					for (int l = 0; l < N; ++l)
+					auto& r_j = config.l.real_space_coord(j/2*2);
+					for (int k = 0; k < N; ++k)
 					{
-						auto& r_l = config.l.real_space_coord(l/2*2);
-						double kdot = K.dot(r_i - r_j + r_k - r_l);
-						tp += std::cos(kdot) * (ca_td_gf[i*N+l] * ca_td_gf[j*N+k] - ca_td_gf[i*N+k] * ca_td_gf[j*N+l])
-							* config.l.parity(i) * config.l.parity(j) * config.l.parity(k) * config.l.parity(l);
-						/*
-						numeric_t x = std::cos(kdot) * (td_gf(l, i) * td_gf(k, j) - td_gf(k, i) * td_gf(l, j));
-						tp += x;
-						bool exists = false;
-						for (int a = 0; a < unique_values.size(); ++a)
-							if (std::abs(x - unique_values[a]) < std::pow(10., -13.))
-							{
-								exists = true;
-								break;
-							}
-						if (!exists)
+						auto& r_k = config.l.real_space_coord(k/2*2);
+						for (int l = 0; l < N; ++l)
 						{
-							unique_values.push_back(x);
-							unique_sites.push_back({i, j, k, l});
+							auto& r_l = config.l.real_space_coord(l/2*2);
+							double kdot = K.dot(r_i - r_j + r_k - r_l);
+							tp += std::cos(kdot) * (ca_td_gf[i*N+l] * ca_td_gf[j*N+k] - ca_td_gf[i*N+k] * ca_td_gf[j*N+l])
+								* config.l.parity(i) * config.l.parity(j) * config.l.parity(k) * config.l.parity(l);
+							/*
+							numeric_t x = std::cos(kdot) * (td_gf(l, i) * td_gf(k, j) - td_gf(k, i) * td_gf(l, j));
+							tp += x;
+							bool exists = false;
+							for (int a = 0; a < unique_values.size(); ++a)
+								if (std::abs(x - unique_values[a]) < std::pow(10., -13.))
+								{
+									exists = true;
+									break;
+								}
+							if (!exists)
+							{
+								unique_values.push_back(x);
+								unique_sites.push_back({i, j, k, l});
+							}
+							*/
 						}
-						*/
 					}
 				}
 			}
@@ -648,6 +651,6 @@ struct wick_tp
 		//for (auto& i : unique_sites)
 		//	std::cout << i[0] << ", " << i[1] << ", " << i[2] << ", " << i[3] << std::endl;
 		
-		return std::real(tp*N);
+		return std::real(tp*N/10.);
 	}
 };
