@@ -28,9 +28,8 @@ struct wick_static_S_chernAA
 		const std::vector<std::pair<int, int>>& bonds_, const Eigen::Vector2d& delta_)
 		: config(config_), rng(rng_), bonds(bonds_), delta(delta_)
 	{
-		const int N = bonds.size();
 		std::vector<Eigen::Vector2d> hexagon_pos;
-		for (int i = 0; i < N; i+=3)
+		for (int i = 0; i < bonds.size(); i+=3)
 		{
 			Eigen::Vector2d r = config.l.real_space_coord(bonds[i].first) + delta;
 			hexagon_pos.push_back(r);
@@ -40,25 +39,25 @@ struct wick_static_S_chernAA
 		auto M = config.l.symmetry_point("M");
 		auto& K = config.l.symmetry_point("K");
 		for (int i = 0; i <= config.param.Lx / 2; ++i)
-			q_vec.push_back(G + (config.l.b1 + config.l.b2) * i / static_cast<double>(config.param.Lx));
+			q_vec.push_back(G + (config.l.b1 + config.l.b2) * static_cast<double>(i) / static_cast<double>(config.param.Lx));
 		if (config.param.Lx % 2 != 0)
 		{
 			M = q_vec[config.param.Lx / 2] + config.l.b1 / static_cast<double>(config.param.Lx);
 			q_vec.push_back(M);
 		}
 		for (int i = 1; i <= config.param.Lx / 6; ++i)
-			q_vec.push_back(M + (config.l.b1 - config.l.b2) * i / static_cast<double>(config.param.Lx));
+			q_vec.push_back(M + (config.l.b1 - config.l.b2) * static_cast<double>(i) / static_cast<double>(config.param.Lx));
 		for (int i = 1; i < config.param.Lx / 3; ++i)
-			q_vec.push_back(K + (-2.*config.l.b1 - config.l.b2) * i / static_cast<double>(config.param.Lx));
+			q_vec.push_back(K + (-2.*config.l.b1 - config.l.b2) * static_cast<double>(i) / static_cast<double>(config.param.Lx));
 		values.resize(q_vec.size());
 		
 		for (int i = 0; i < hexagon_pos.size(); ++i)
 			for (int j = 0; j < hexagon_pos.size(); ++j)
+			{
+				auto delta_r = hexagon_pos[i] - hexagon_pos[j];
 				for (int k = 0; k < q_vec.size(); ++k)
-				{
-					auto delta_r = hexagon_pos[i] - hexagon_pos[j];
 					fourier_coeff.push_back(std::cos(q_vec[k].dot(delta_r)));
-				}
+			}
 	}
 	
 	std::vector<double>& get_obs(const matrix_t& et_gf)
