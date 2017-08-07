@@ -574,15 +574,16 @@ struct wick_sp
 		const int N = config.l.n_sites();
 		for (int i = 0; i < N; ++i)
 		{
-			auto& r_i = config.l.real_space_coord(i/2*2);
+			auto& r_i = config.l.real_space_coord(i);
 			for (int j = 0; j < N; ++j)
 			{
-				auto& r_j = config.l.real_space_coord(j/2*2);
+				auto& r_j = config.l.real_space_coord(j);
 				double kdot = K.dot(r_i - r_j);
-				sp += std::cos(kdot) * ca_td_gf[j*N+i];
+				sp += std::cos(kdot) * ca_td_gf[j*N+i] * config.l.parity(i)*config.l.parity(j);
+				//sp += std::cos(kdot) * ca_td_gf[j*N+i] * (1. + config.l.parity(i)*config.l.parity(j));
 			}
 		}
-		return std::real(sp);
+		return std::real(sp) / std::pow(N, 2.);
 	}
 };
 
@@ -609,23 +610,27 @@ struct wick_tp
 		//std::vector<std::array<int, 4>> unique_sites;
 		
 		//for (int i = 0; i < N; ++i)
-		for (int n = 0; n < 10; ++n)
+		//for (int n = 0; n < 10; ++n)
 		{
 			int i = rng() * N;
 			{
-				auto& r_i = config.l.real_space_coord(i/2*2);
-				for (int j = 0; j < N; ++j)
+				auto& r_i = config.l.real_space_coord(i);
+				//for (int j = 0; j < N; ++j)
+				int j = rng() * N;
 				{
-					auto& r_j = config.l.real_space_coord(j/2*2);
+					auto& r_j = config.l.real_space_coord(j);
 					for (int k = 0; k < N; ++k)
 					{
-						auto& r_k = config.l.real_space_coord(k/2*2);
+						auto& r_k = config.l.real_space_coord(k);
 						for (int l = 0; l < N; ++l)
 						{
-							auto& r_l = config.l.real_space_coord(l/2*2);
+							auto& r_l = config.l.real_space_coord(l);
 							double kdot = K.dot(r_i - r_j + r_k - r_l);
 							tp += std::cos(kdot) * (ca_td_gf[i*N+l] * ca_td_gf[j*N+k] - ca_td_gf[i*N+k] * ca_td_gf[j*N+l])
 								* config.l.parity(i) * config.l.parity(j) * config.l.parity(k) * config.l.parity(l);
+							
+							//tp += std::cos(kdot) * (ca_td_gf[i*N+l] * ca_td_gf[j*N+k] - ca_td_gf[i*N+k] * ca_td_gf[j*N+l])
+							//	* (1. + config.l.parity(i) * config.l.parity(j) * config.l.parity(k) * config.l.parity(l));
 							/*
 							numeric_t x = std::cos(kdot) * (td_gf(l, i) * td_gf(k, j) - td_gf(k, i) * td_gf(l, j));
 							tp += x;
@@ -651,6 +656,6 @@ struct wick_tp
 		//for (auto& i : unique_sites)
 		//	std::cout << i[0] << ", " << i[1] << ", " << i[2] << ", " << i[3] << std::endl;
 		
-		return std::real(tp*N/10.);
+		return std::real(tp) / std::pow(N, 2.);
 	}
 };

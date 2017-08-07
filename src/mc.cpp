@@ -146,12 +146,12 @@ void mc::init()
 	config.measure.add_observable("condition_number", n_prebin);
 	if (config.param.mu != 0 || config.param.stag_mu != 0)
 	{
-		config.measure.add_observable("n_re", n_prebin*100);
-		config.measure.add_observable("n_im", n_prebin*100);
-		config.measure.add_observable("n", n_prebin*100);
+		config.measure.add_observable("n_re", n_prebin);
+		config.measure.add_observable("n_im", n_prebin);
+		config.measure.add_observable("n", n_prebin);
 	}
-	config.measure.add_observable("sign_phase_re", n_prebin*100);
-	config.measure.add_observable("sign_phase_im", n_prebin*100);
+	config.measure.add_observable("sign_phase_re", n_prebin);
+	config.measure.add_observable("sign_phase_im", n_prebin);
 	config.measure.add_observable("energy", n_prebin);
 	config.measure.add_observable("h_t", n_prebin);
 	config.measure.add_observable("h_v", n_prebin);
@@ -175,6 +175,7 @@ void mc::init()
 		N_path += 1;
 	config.measure.add_vectorobservable("S_chernAA", N_path, n_prebin);
 	config.measure.add_vectorobservable("S_chernBB", N_path, n_prebin);
+	config.measure.add_vectorobservable("S_chern_real_space", config.l.bonds("chern").size(), n_prebin);
 	config.measure.add_vectorobservable("corr", config.l.max_distance() + 1,
 		n_prebin);
 	n_prebin /= config.param.n_tau_slices / 8 / n_static_cycles;

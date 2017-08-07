@@ -31,7 +31,7 @@ struct wick_static_energy
 		for (auto& a : config.l.bonds("nearest neighbors"))
 			energy += config.param.V * ((1. - et_gf(a.first, a.first)) * (1. - et_gf(a.second, a.second))
 				- et_gf(a.second, a.first) * et_gf(a.first, a.second) - (et_gf(a.first, a.first) + et_gf(a.second, a.second))/2. + 1./4.)/2.;
-		for (auto& a : config.l.bonds("d3_bonds"))
+		for (auto& a : config.l.bonds("t3_bonds"))
 			energy += config.param.tprime * et_gf(a.second, a.first);
 		for (int i = 0; i < config.l.n_sites(); ++i)
 			energy += -config.l.parity(i) * config.param.stag_mu * et_gf(i, i);
@@ -734,6 +734,6 @@ struct wick_static_kek
 							+ config.l.parity(a.first) * config.l.parity(b.first) * ca_et_gf[b.first*ns + a.first] * ca_et_gf[b.second*ns + a.second]);
 					}
 			}
-		return std::real(kek) / std::pow(config.l.n_bonds(), 2.);
+		return std::real(2.*kek) / std::pow(config.l.n_bonds(), 2.);
 	}
 };

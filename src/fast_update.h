@@ -406,6 +406,8 @@ class fast_update
 			for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 			{
 				int as = alpha * l.n_sites();
+				//for (auto& a : l.bonds("nearest neighbors"))
+				//	H0(a.first+as, a.second+as) = -param.t;
 				for (auto& a : l.bonds("t3_bonds"))
 					H0(a.first+as, a.second+as) = -param.tprime;
 				for (int i = 0; i < l.n_sites(); ++i)
@@ -417,11 +419,18 @@ class fast_update
 		{
 			if (flavor == 0)
 			{
+				
 				numeric_t c = std::cosh(param.t * param.dtau + param.lambda * spin);
 				numeric_t s = std::sinh(param.t * param.dtau + param.lambda * spin);
 				numeric_t cp = std::cosh(param.t * param.dtau - param.lambda * spin);
 				numeric_t sp = std::sinh(param.t * param.dtau - param.lambda * spin);
-
+				
+				/*
+				numeric_t c = std::cosh(param.lambda * spin);
+				numeric_t s = std::sinh(param.lambda * spin);
+				numeric_t cp = std::cosh(-param.lambda * spin);
+				numeric_t sp = std::sinh(-param.lambda * spin);
+				*/
 				vertex_matrices[cnt] << c, s, s, c;
 				inv_vertex_matrices[cnt] << c, -s, -s, c;
 				delta_matrices[cnt] << cp*c - sp*s - 1., -cp*s+sp*c, sp*c-cp*s, -sp*s + cp*c - 1.;
@@ -744,6 +753,12 @@ class fast_update
 			dmatrix_t b = id;
 			for (int n = tau_n; n > tau_m; --n)
 			{
+				//if (param.multiply_T)
+				//	b *= expH0;
+				
+				
+				
+				
 				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 					for (int beta = 0; beta < param.n_flavor; ++beta)
 					{
@@ -768,9 +783,17 @@ class fast_update
 					for (int beta = param.n_flavor - 1; beta >= 0; --beta)
 						for (int bt = nn_bonds.size() - 1; bt >= 0; --bt)
 							multiply_Gamma_matrix(bt, alpha, beta);
+						
+				
+				
+				//multiply_T_matrix();
 			}
 			else if (param.direction == -1)
 			{
+				//multiply_T_matrix();
+				
+				
+				
 				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 					for (int beta = 0; beta < param.n_flavor; ++beta)
 						for (int bt = 0; bt < nn_bonds.size(); ++bt)

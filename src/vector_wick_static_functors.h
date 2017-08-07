@@ -83,3 +83,35 @@ struct wick_static_S_chernAA
 		return values;
 	}
 };
+
+struct wick_static_S_chern_real_space
+{
+	configuration& config;
+	Random& rng;
+	const std::vector<std::pair<int, int>>& bonds;
+	std::vector<double> values;
+
+	wick_static_S_chern_real_space(configuration& config_, Random& rng_,
+		const std::vector<std::pair<int, int>>& bonds_)
+		: config(config_), rng(rng_), bonds(bonds_)
+	{
+		values.resize(bonds.size());
+	}
+	
+	std::vector<double>& get_obs(const matrix_t& et_gf)
+	{
+		const numeric_t *ca_et_gf_0 = et_gf.data();
+		const int N = bonds.size(), ns = config.l.n_sites();
+		std::fill(values.begin(), values.end(), 0.);
+		auto& a = bonds[0];
+		for (int j = 0; j < N; ++j)
+		{
+			auto& b = bonds[j];
+			values[j] = -2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+				+ ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
+				- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+				- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first]);
+		}
+		return values;
+	}
+};

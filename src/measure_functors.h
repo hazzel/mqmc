@@ -40,6 +40,16 @@ void eval_epsilon(std::valarray<double>& out,
 		out[i] = (*ep_tau)[i] - epsilon * epsilon;
 }
 
+void eval_log_ratio(std::valarray<double>& out,
+	std::vector<std::valarray<double>*>& o)
+{
+	int N = 1;
+	std::valarray<double>* c_tau = o[0];
+	out.resize(c_tau->size() - N);
+	for (int i = 0; i < c_tau->size() - N; ++i)
+		out[i] = std::log((*c_tau)[i] / (*c_tau)[i+N]);
+}
+
 void eval_n(double& out,
 	std::vector<std::valarray<double>*>& o)
 {
@@ -104,8 +114,12 @@ struct measure_M
 		
 		if (config.param.n_discrete_tau > 0)
 			for (int i = 0; i < config.param.obs.size(); ++i)
+			{
 				if (config.param.obs[i] == "epsilon")
 					config.measure.add_vectorevalable("dyn_epjack_tau", "dyn_epsilon_tau", "epsilon", eval_epsilon);
+				if (config.param.obs[i] == "sp")
+					config.measure.add_vectorevalable("sp_log_ratio", "dyn_sp_tau", eval_log_ratio);
+			}
 		
 		os << "PARAMETERS" << std::endl;
 		pars.get_all(os);

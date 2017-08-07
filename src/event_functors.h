@@ -120,9 +120,18 @@ struct event_flip_all
 					for (int beta = 0; beta < config.param.n_flavor; ++beta)
 						for (int bt = config.M.n_cb_bonds() - 1; bt >= 0; --bt)
 							flip_cb(bt, alpha, beta);
+						
+				
+				
+				//config.M.multiply_T_matrix();
 			}
 			else if (config.param.direction == -1)
 			{
+				//config.M.multiply_T_matrix();
+				
+				
+				
+				
 				for (int alpha = config.param.n_flavor - 1; alpha >= 0; --alpha)
 					for (int beta = config.param.n_flavor - 1; beta >= 0; --beta)
 						for (int bt = 0; bt < config.M.n_cb_bonds(); ++bt)
@@ -201,6 +210,10 @@ struct event_static_measurement
 			{
 				Eigen::Vector2d delta = {0.5, -std::sqrt(3.)/2.};
 				add_vector_wick(wick_static_S_chernAA{config, rng, config.l.bonds("chern_2"), delta}, observables[i]);
+			}
+			else if (observables[i] == "S_chern_real_space")
+			{
+				add_vector_wick(wick_static_S_chern_real_space{config, rng, config.l.bonds("chern")}, observables[i]);
 			}
 			else if (observables[i] == "chern4")
 				add_wick(wick_static_chern4{config, rng}, observables[i]);
