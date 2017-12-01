@@ -21,6 +21,7 @@ class event_base
 		event_base& operator=(event_base&& rhs) = default;
 
 		void trigger() { trigger_fun(); }
+		void init() { init_fun(); }
 		std::string name() { return name_str; }
 	private:
 		template<typename T>
@@ -28,12 +29,14 @@ class event_base
 		{
 			impl = std::shared_ptr<T>(functor);
 			trigger_fun = [functor]() { functor->trigger(); };
+			init_fun = [functor]() { functor->init(); };
 			clone_fun = [functor, this]() { return event_base(*functor,
 				name_str); };
 		}
 	private:
 		std::shared_ptr<void> impl;
 		std::function<void()> trigger_fun;
+		std::function<void()> init_fun;
 		std::function<event_base()> clone_fun;
 		std::string name_str;
 };

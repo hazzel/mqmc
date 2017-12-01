@@ -53,7 +53,7 @@ struct wick_static_h_t
 		numeric_t energy = 0.;
 		for (auto& a : config.l.bonds("nearest neighbors"))
 			energy += config.param.t * et_gf(a.second, a.first);
-		for (auto& a : config.l.bonds("d3_bonds"))
+		for (auto& a : config.l.bonds("t3_bonds"))
 			energy += config.param.tprime * et_gf(a.second, a.first);
 		return std::real(energy);
 	}

@@ -69,6 +69,12 @@ class mctools
 			//map[] operators requires constructor() without arguments
 			events.find(name)->second.trigger();
 		}
+		
+		void init_events()
+		{
+			for (auto it = events.begin(); it != events.end(); ++it)
+				it->second.init();
+		}
 
 		void do_measurement()
 		{

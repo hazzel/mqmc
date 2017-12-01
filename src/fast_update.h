@@ -14,6 +14,7 @@
 #include "wick_base.h"
 #include "wick_static_base.h"
 #include "vector_wick_static_base.h"
+#include "vector_wick_base.h"
 
 template <class data_t, class index_t>
 class SortIndicesInc
@@ -32,8 +33,8 @@ template<typename arg_t>
 class fast_update
 {
 	public:
-		//using numeric_t = std::complex<double>;
-		using numeric_t = double;
+		using numeric_t = std::complex<double>;
+		//using numeric_t = double;
 		template<int n, int m>
 		using matrix_t = Eigen::Matrix<numeric_t, n, m, Eigen::ColMajor>;
 		using dmatrix_t = matrix_t<Eigen::Dynamic, Eigen::Dynamic>;
@@ -271,20 +272,145 @@ class fast_update
 			return S_f.leftCols(S.cols());
 		}
 		
+		std::vector<std::vector<int>> get_energy_blocks(const Eigen::VectorXd& en)
+		{
+			double epsilon = std::pow(10., -4.);
+			std::vector<std::vector<int>> energy_blocks;
+			energy_blocks.push_back({0, n_matrix_size-1});
+			for (int i = 1; i < n_matrix_size/2; ++i)
+			{
+				if (std::abs(en(i) - en(energy_blocks.back()[0])) > epsilon)
+					energy_blocks.push_back(std::vector<int>());
+				energy_blocks.back().push_back(i);
+				energy_blocks.back().push_back(n_matrix_size-1-i);
+			}
+			for (int i = 0; i < energy_blocks.size(); ++i)
+				std::sort(energy_blocks[i].begin(), energy_blocks[i].end());
+			return energy_blocks;
+		}
+		
+		dmatrix_t symmetrize_ph_blocks(const dmatrix_t& S, const std::vector<std::vector<int>>& energy_blocks, const Eigen::VectorXd& en, const dmatrix_t& pm)
+		{
+			double epsilon = std::pow(10., -4.);
+
+			dmatrix_t S_s = S + pm * S;
+			dmatrix_t S_a = S - pm * S;
+			dmatrix_t S_so(n_matrix_size, S_s.cols());
+			dmatrix_t S_ao(n_matrix_size, S_s.cols());
+			dmatrix_t S_f = dmatrix_t::Zero(n_matrix_size, 2*S_s.cols());
+
+			for (int i = 0; i < S_s.cols(); ++i)
+			{
+				if (S_s.col(i).norm() > epsilon)
+					S_s.col(i) /= S_s.col(i).norm();
+				else
+					S_s.col(i) *= 0.;
+				if (S_a.col(i).norm() > epsilon)
+					S_a.col(i) /= S_a.col(i).norm();
+				else
+					S_a.col(i) *= 0.;
+			}
+			/*
+			for (int i = 0; i < S_s.cols(); ++i)
+				std::cout << "i = " << i << ", E = " << en(i) << std::endl;
+			for (int i = 0; i < energy_blocks.size(); ++i)
+			{
+				std::cout << "block " << i << " : ";
+				for (int j = 0; j < energy_blocks[i].size(); ++j)
+					std::cout << energy_blocks[i][j] << ", ";
+				std::cout << std::endl;
+			}
+			*/
+
+			int cnt_s = 0, cnt_a = 0;
+			for (int i = 0; i < energy_blocks.size(); ++i)
+				for (int j = 0; j < energy_blocks[i].size(); ++j)
+				{
+					int b = energy_blocks[i][j];
+					S_so.col(b) = S_s.col(b);
+					S_ao.col(b) = S_a.col(b);
+					for (int k = 0; k < j; ++k)
+					{
+						int a = energy_blocks[i][k];
+						S_so.col(b) -= S_so.col(a) * (S_so.col(a).dot(S_s.col(b)));
+						S_ao.col(b) -= S_ao.col(a) * (S_ao.col(a).dot(S_a.col(b)));
+					}
+					std::cout << "E=" << en(b) << ", orth: i=" << i << ", b=" << b << ": " << S_so.col(b).norm() << " " << S_ao.col(b).norm() << std::endl;
+					if (S_so.col(b).norm() > epsilon)
+					{
+						S_so.col(b) /= S_so.col(b).norm();
+						S_f.col(cnt_s) = S_so.col(b);
+						++cnt_s;
+					}
+					if (S_ao.col(b).norm() > epsilon)
+					{
+						S_ao.col(b) /= S_ao.col(b).norm();
+						S_f.col(n_matrix_size/2+cnt_a) = S_ao.col(b);
+						++cnt_a;
+					}
+				}
+			if (cnt_s != S.cols()/2 || cnt_a != S.cols()/2)
+			{
+				std::cout << "Error! Found " << cnt_s << " symmetric states out of " << 2*S.cols() << std::endl;
+				std::cout << "Error! Found " << cnt_a << " antisymmetric states out of " << 2*S.cols() << std::endl;
+				throw(std::runtime_error("Error in symmetrization. Wrong number of states."));
+			}
+			return S_f.leftCols(S.cols());
+		}
+		
+		void select_ph_states(const dmatrix_t& S, const dmatrix_t& ev, const std::vector<std::vector<int>>& energy_blocks, const dmatrix_t& H, const dmatrix_t& pm)
+		{
+			double epsilon = std::pow(10., -4.);
+			for (int i = 0; i < n_matrix_size/2; ++i)
+			{
+				Eigen::VectorXd u_s = (S.col(i) + S.col(n_matrix_size/2+i))/std::sqrt(2.);
+				Eigen::VectorXd u_a = (S.col(i) - S.col(n_matrix_size/2+i))/std::sqrt(2.);
+				std::cout << "i = " << i << ", P_s = " << std::real(u_s.dot(H * u_s)) << std::endl;
+				std::cout << "i = " << i << ", P_a = " << std::real(u_a.dot(H * u_a)) << std::endl;
+				for (int j = 0; j < n_matrix_size/2; ++j)
+				{
+					double x = std::abs((pm*ev.col(i)).dot(ev.col(n_matrix_size/2+j)));
+					if (x > epsilon)
+						std::cout << "x = " << x << ", i = " << i << ", j = " << n_matrix_size/2+j << std::endl;
+				}
+			}
+		}
+		
+		Eigen::MatrixXcd symmetrize_rot_EV(const dmatrix_t& S, const Eigen::VectorXd& en, const std::vector<std::vector<int>>& energy_blocks, const dmatrix_t& pm)
+		{
+			double epsilon = std::pow(10., -4.);
+			Eigen::MatrixXcd S_f = dmatrix_t::Zero(n_matrix_size, S.cols());
+
+			for (int i = 0; i < energy_blocks.size(); ++i)
+			{
+				int N = energy_blocks[i].size();
+				dmatrix_t projP(N, N);
+				for (int j = 0; j < N; ++j)
+					for (int k = 0; k < N; ++k)
+						projP(j, k) = S.col(energy_blocks[i][j]).dot(pm * S.col(energy_blocks[i][k]));
+					
+				Eigen::EigenSolver<dmatrix_t> solver(projP);
+				std::cout << "Projected eigenvalues: i = " << i << std::endl;
+				for (int j = 0; j < N; ++j)
+					std::cout << solver.eigenvalues()[j] << std::endl;
+				for (int j = 0; j < N; ++j)
+					for (int k = 0; k < N; ++k)
+						S_f.col(energy_blocks[i][j]) += solver.eigenvectors()(k, j) * S.col(energy_blocks[i][k]);
+			}
+			for (int i = 0; i < S.cols(); ++i)
+			{
+				if (S_f.col(i).norm() > epsilon)
+					S_f.col(i) /= S_f.col(i).norm();
+				else
+					S_f.col(i) *= 0.;
+			}
+			
+			return S_f;
+		}
+		
 		void get_trial_wavefunction(const dmatrix_t& H)
 		{
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
-			/*
-			if (param.geometry != "rhom")
-			{
-				std::cout << param.geometry << std::endl;
-				std::cout << n_matrix_size << " sites." << std::endl;
-				std::cout << solver.eigenvalues() << std::endl;
-				
-				//std::cout << "H - P * H * P" << std::endl;
-				//std::cout << H - inv_pm * H * inv_pm << std::endl;
-			}
-			*/
 			if (l.n_sites() % 3 != 0)
 			{
 				P = solver.eigenvectors().leftCols(n_matrix_size/2);
@@ -292,39 +418,33 @@ class fast_update
 				return;
 			}
 			dmatrix_t inv_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size),
-				ph_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
+				ph_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size),
+				rot60_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			for (int i = 0; i < n_matrix_size; ++i)
 			{
 				inv_pm(i, l.inverted_site(i)) = 1.;
+				rot60_pm(i, l.rotated_site(i, 60.)) = 1.;
 				ph_pm(i, i) = l.parity(i);
-				//std::cout << i << " <-> " << l.inverted_site(i) << std::endl;
 			}
 			
-			double epsilon = std::pow(10., -4.), total_inv_parity = 1, total_ph_parity = 1;
+			double epsilon = std::pow(10., -4.);
+			numeric_t total_inv_parity = 1, total_ph_parity = 1;
 			auto S_f = symmetrize_EV(solver.eigenvectors(), solver.eigenvalues(), inv_pm);
-			std::vector<double> inv_parity(n_matrix_size), ph_2p_parity(6);
-			//std::cout << "after inversion symmetry" << std::endl;
+			std::vector<numeric_t> inv_parity(n_matrix_size), ph_2p_parity(6);
 			for (int i = 0; i < n_matrix_size; ++i)
-			{
 				inv_parity[i] = std::real(S_f.col(i).dot(inv_pm * S_f.col(i)));
-				//std::cout << i << ": e = " << solver.eigenvalues()[i] << ", P = " << inv_parity[i] << std::endl;
-			}
 			
 			dmatrix_t ph_1p_block = S_f.block(0, n_matrix_size/2-2, n_matrix_size, 4);
 			Eigen::VectorXd ph_ev = Eigen::VectorXd::Zero(4);
 			//std::cout << "PH first" << std::endl;
 			ph_1p_block = symmetrize_EV(ph_1p_block, ph_ev, ph_pm);
 			for (int i = 0; i < ph_1p_block.cols(); ++i)
-			{
-				double inv_p = std::real(ph_1p_block.col(i).dot(inv_pm * ph_1p_block.col(i)));
-				ph_2p_parity[i] = std::real(ph_1p_block.col(i).dot(ph_pm * ph_1p_block.col(i)));
-				//std::cout << i << ": e = " << ph_ev[i] << ", P = " << inv_p << ", PH = " << ph_2p_parity[i] << std::endl;
-			}
+				numeric_t inv_p = std::real(ph_1p_block.col(i).dot(inv_pm * ph_1p_block.col(i)));
 			//std::cout << "PH second" << std::endl;
 			ph_1p_block = ph_symmetrize_EV(ph_1p_block, ph_pm);
 			for (int i = 0; i < ph_1p_block.cols(); ++i)
 			{
-				double inv_p = std::real(ph_1p_block.col(i).dot(inv_pm * ph_1p_block.col(i)));
+				numeric_t inv_p = std::real(ph_1p_block.col(i).dot(inv_pm * ph_1p_block.col(i)));
 				ph_2p_parity[i] = std::real(ph_1p_block.col(i).dot(ph_pm * ph_1p_block.col(i)));
 				//std::cout << i << ": e = " << ph_ev[i] << ", P = " << inv_p << ", PH = " << ph_2p_parity[i] << std::endl;
 			}
@@ -334,17 +454,17 @@ class fast_update
 			ph_2p_block[0].col(1) = ph_1p_block.col(3);
 			ph_2p_block[1].col(0) = ph_1p_block.col(1);
 			ph_2p_block[1].col(1) = ph_1p_block.col(2);
-			//ph_2p_block[2].col(0) = (ph_1p_block.col(0) - ph_1p_block.col(1))/std::sqrt(2.);
-			//ph_2p_block[2].col(1) = (ph_1p_block.col(2) - ph_1p_block.col(3))/std::sqrt(2.);
+			//ph_2p_block[2].col(0) = (ph_1p_block.col(0) - ph_1p_block.col(2))/std::sqrt(2.);
+			//ph_2p_block[2].col(1) = (ph_1p_block.col(1) - ph_1p_block.col(3))/std::sqrt(2.);
 			//PH = -1
 			ph_2p_block[3].col(0) = ph_1p_block.col(0);
 			ph_2p_block[3].col(1) = ph_1p_block.col(1);
 			ph_2p_block[4].col(0) = ph_1p_block.col(2);
 			ph_2p_block[4].col(1) = ph_1p_block.col(3);
-			//ph_2p_block[5].col(0) = (ph_1p_block.col(0) + ph_1p_block.col(1))/std::sqrt(2.);
-			//ph_2p_block[5].col(1) = (ph_1p_block.col(2) + ph_1p_block.col(3))/std::sqrt(2.);
+			//ph_2p_block[5].col(0) = (ph_1p_block.col(0) + ph_1p_block.col(2))/std::sqrt(2.);
+			//ph_2p_block[5].col(1) = (ph_1p_block.col(1) + ph_1p_block.col(3))/std::sqrt(2.);
 			ph_2p_parity = {-1., -1., -1., 1., 1., 1.};
-			std::vector<double> inv_2p_parity;// = {-1., -1., -1., 1., 1., -1.};
+			std::vector<numeric_t> inv_2p_parity;// = {-1., -1., -1., 1., 1., -1.};
 			inv_2p_parity.push_back(ph_2p_block[0].col(0).dot(inv_pm * ph_2p_block[0].col(0))
 				* ph_2p_block[0].col(1).dot(inv_pm * ph_2p_block[0].col(1)));
 			inv_2p_parity.push_back(ph_2p_block[1].col(0).dot(inv_pm * ph_2p_block[1].col(0))
@@ -359,6 +479,23 @@ class fast_update
 			inv_2p_parity.push_back(ph_1p_block.col(0).dot(inv_pm * ph_1p_block.col(0))
 				* ph_1p_block.col(2).dot(inv_pm * ph_1p_block.col(2)));
 			
+			/////////////////
+			
+			//auto energy_blocks = get_energy_blocks(solver.eigenvalues());
+			//dmatrix_t ph_Np_block = S_f.block(0, 0, n_matrix_size, n_matrix_size);
+			//dmatrix_t ph_Np_block = solver.eigenvectors().block(0, 0, n_matrix_size, n_matrix_size);
+			//ph_Np_block = symmetrize_ph_blocks(ph_Np_block, energy_blocks, solver.eigenvalues(), ph_pm);
+			//select_ph_states(ph_Np_block, S_f.block(0, 0, n_matrix_size, n_matrix_size), energy_blocks, H, ph_pm);
+			
+			//%%%%%%%%%%
+			
+			auto energy_blocks = get_energy_blocks(solver.eigenvalues());
+			auto S_rot = symmetrize_rot_EV(S_f, solver.eigenvalues(), energy_blocks, rot60_pm);
+			std::cout << "Single particle eigenvalues:" << std::endl;
+			for (int i = 0; i < n_matrix_size; ++i)
+				std::cout << "i = " << i << ", " << S_rot.col(i).adjoint() * rot60_pm * S_rot.col(i) << std::endl;
+			
+			/////////////////
 			
 			P.resize(n_matrix_size, n_matrix_size / 2);
 			for (int i = 0; i < n_matrix_size/2-2; ++i)
@@ -955,8 +1092,11 @@ class fast_update
 			}
 		}
 
-		void measure_dynamical_observable(std::vector<std::vector<double>>&
-			dyn_tau, const std::vector<wick_base<dmatrix_t>>& obs)
+		void measure_dynamical_observable(std::vector<std::vector<double>>& dyn_tau,
+			const std::vector<std::string>& names,
+			const std::vector<wick_base<dmatrix_t>>& obs,
+			const std::vector<std::string>& vec_names,
+			const std::vector<vector_wick_base<dmatrix_t>>& vec_obs)
 		{
 			//check_td_gf_stability();
 			if (param.use_projector)
@@ -1040,9 +1180,18 @@ class fast_update
 				*/
 				
 				
-				
-				for (int i = 0; i < dyn_tau.size(); ++i)
+				for (int i = 0; i < obs.size(); ++i)
 					dyn_tau[i][0] = obs[i].get_obs(et_gf_0, et_gf_0, et_gf_0);
+				int cnt = 0;
+				for (int i = 0; i < vec_obs.size(); ++i)
+				{
+					auto& values = vec_obs[i].get_obs(et_gf_0, et_gf_0, et_gf_0);
+					for (int j = 0; j < vec_obs[i].n_values; ++j)
+					{
+						dyn_tau[obs.size()+cnt][0] = values[j];
+						++cnt;
+					}
+				}
 				for (int n = 1; n <= param.n_discrete_tau; ++n)
 				{
 					dmatrix_t g_l, g_r;
@@ -1062,15 +1211,34 @@ class fast_update
 					}
 					
 					time_displaced_gf = g_l * time_displaced_gf;
-					for (int i = 0; i < dyn_tau.size(); ++i)
+					for (int i = 0; i < obs.size(); ++i)
 						dyn_tau[i][2*n-1] = obs[i].get_obs(et_gf_0, et_gf_R[2*n-2],
 							time_displaced_gf);
+					cnt = 0;
+					for (int i = 0; i < vec_obs.size(); ++i)
+					{
+						auto& values = vec_obs[i].get_obs(et_gf_0, et_gf_R[2*n-2], time_displaced_gf);
+						for (int j = 0; j < vec_obs[i].n_values; ++j)
+						{
+							dyn_tau[obs.size()+cnt][2*n-1] = values[j];
+							++cnt;
+						}
+					}
 					time_displaced_gf = time_displaced_gf * g_r;
-					for (int i = 0; i < dyn_tau.size(); ++i)
+					for (int i = 0; i < obs.size(); ++i)
 						dyn_tau[i][2*n] = obs[i].get_obs(et_gf_0, et_gf_R[2*n-1],
 							time_displaced_gf);
+					cnt = 0;
+					for (int i = 0; i < vec_obs.size(); ++i)
+					{
+						auto& values = vec_obs[i].get_obs(et_gf_0, et_gf_R[2*n-1], time_displaced_gf);
+						for (int j = 0; j < vec_obs[i].n_values; ++j)
+						{
+							dyn_tau[obs.size()+cnt][2*n] = values[j];
+							++cnt;
+						}
+					}
 				}
-				
 
 				reset_equal_time_gf_to_buffer();
 				stabilizer.restore_buffer();
@@ -1089,9 +1257,20 @@ class fast_update
 					if (n % (max_tau / param.n_discrete_tau) == 0)
 					{
 						int t = n / (max_tau / param.n_discrete_tau);
-						for (int i = 0; i < dyn_tau.size(); ++i)
+						for (int i = 0; i < obs.size(); ++i)
 							dyn_tau[i][t] = obs[i].get_obs(et_gf_0, equal_time_gf,
 								time_displaced_gf);
+						int cnt = 0;
+						for (int i = 0; i < vec_obs.size(); ++i)
+						{
+							auto& values = vec_obs[i].get_obs(et_gf_0, equal_time_gf,
+								time_displaced_gf);
+							for (int j = 0; j < vec_obs[i].n_values; ++j)
+							{
+								dyn_tau[obs.size()+cnt][t] = values[j];
+								++cnt;
+							}
+						}
 					}
 					if (direction == 1 && tau < max_tau)
 					{

@@ -103,8 +103,8 @@ mc::mc(const std::string& dir)
 	//Set up events
 	qmc.add_event(event_build{config, rng}, "initial build");
 	qmc.add_event(event_flip_all{config, rng}, "flip all");
-	qmc.add_event(event_static_measurement{config, rng, n_prebin, config.param.static_obs},
-		"static_measure");
+	qmc.add_event(event_static_measurement{config, rng, config.param.n_tau_slices / n_static_cycles,
+		config.param.static_obs}, "static_measure");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin, config.param.obs},
 		"dyn_measure");
 
@@ -139,54 +139,7 @@ void mc::random_read(idump& d)
 
 void mc::init()
 {
-	//Set up measurements
-	n_prebin *= config.param.n_tau_slices / 8 / n_static_cycles;
-	config.measure.add_observable("norm_error", n_prebin);
-	config.measure.add_observable("td_norm_error", n_prebin);
-	config.measure.add_observable("condition_number", n_prebin);
-	if (config.param.mu != 0 || config.param.stag_mu != 0)
-	{
-		config.measure.add_observable("n_re", n_prebin);
-		config.measure.add_observable("n_im", n_prebin);
-		config.measure.add_observable("n", n_prebin);
-	}
-	config.measure.add_observable("sign_phase_re", n_prebin);
-	config.measure.add_observable("sign_phase_im", n_prebin);
-	config.measure.add_observable("energy", n_prebin);
-	config.measure.add_observable("h_t", n_prebin);
-	config.measure.add_observable("h_v", n_prebin);
-	config.measure.add_observable("h_mu", n_prebin);
-	config.measure.add_observable("M2", n_prebin);
-	config.measure.add_observable("S_cdw_q", n_prebin);
-	config.measure.add_observable("M4", n_prebin);
-	config.measure.add_observable("epsilon", n_prebin);
-	config.measure.add_observable("epsilon_V", n_prebin);
-	config.measure.add_observable("kekule", n_prebin);
-	config.measure.add_observable("chern2", n_prebin);
-	config.measure.add_observable("S_chern_q", n_prebin);
-	config.measure.add_observable("chern4", n_prebin);
-	config.measure.add_observable("chernAA", n_prebin);
-	config.measure.add_observable("S_chernAA_q", n_prebin);
-	config.measure.add_observable("chernBB", n_prebin);
-	config.measure.add_observable("S_chernBB_q", n_prebin);
-	int N_path = (config.param.Lx / 2) + (config.param.Lx / 6)
-		+ (config.param.Lx / 3);
-	if (config.param.Lx % 2 != 0)
-		N_path += 1;
-	config.measure.add_vectorobservable("S_chernAA", N_path, n_prebin);
-	config.measure.add_vectorobservable("S_chernBB", N_path, n_prebin);
-	config.measure.add_vectorobservable("S_chern_real_space", config.l.bonds("chern").size(), n_prebin);
-	config.measure.add_vectorobservable("corr", config.l.max_distance() + 1,
-		n_prebin);
-	n_prebin /= config.param.n_tau_slices / 8 / n_static_cycles;
-
-	if (config.param.n_discrete_tau > 0)
-		for (int i = 0; i < config.param.obs.size(); ++i)
-		{
-			config.measure.add_vectorobservable("dyn_"+config.param.obs[i]+"_tau",
-				config.param.n_discrete_tau + 1, n_prebin);
-		}
-
+	qmc.init_events();
 	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }
@@ -206,7 +159,7 @@ void mc::write(const std::string& dir)
 	{
 		f << "Thermalization: Done." << std::endl
 			<< "Sweeps: " << (sweep - n_warmup) << std::endl
-			<< "Static bins: " << static_cast<int>(static_bin_cnt / n_prebin / (config.param.n_tau_slices / 8 / n_static_cycles))
+			<< "Static bins: " << static_cast<int>(static_bin_cnt / (config.param.n_tau_slices / n_static_cycles))
 			<< std::endl
 			<< "Dynamic bins: " << static_cast<int>(dyn_bin_cnt / n_prebin)
 			<< std::endl;

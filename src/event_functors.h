@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <vector>
+#include <chrono>
 #include "measurements.h"
 #include "configuration.h"
 #include "fast_update.h"
@@ -8,6 +9,8 @@
 #include "wick_functors.h"
 #include "wick_static_base.h"
 #include "wick_static_functors.h"
+#include "vector_wick_base.h"
+#include "vector_wick_functors.h"
 #include "vector_wick_static_base.h"
 #include "vector_wick_static_functors.h"
 
@@ -33,6 +36,8 @@ struct event_build
 				}
 		config.M.build(initial_vertices);
 	}
+	
+	void init() {}
 };
 
 struct event_flip_all
@@ -142,6 +147,8 @@ struct event_flip_all
 			}
 		}
 	}
+	
+	void init() {}
 };
 
 struct event_static_measurement
@@ -154,10 +161,11 @@ struct event_static_measurement
 	std::vector<vector_wick_static_base<matrix_t>> vec_obs;
 	std::vector<std::string> names;
 	std::vector<std::string> vec_names;
+	int n_prebin;
 
 	event_static_measurement(configuration& config_, Random& rng_,
-		int n_prebin, const std::vector<std::string>& observables)
-		: config(config_), rng(rng_)
+		int n_prebin_, const std::vector<std::string>& observables)
+		: config(config_), rng(rng_), n_prebin(n_prebin_)
 	{
 		obs.reserve(100);
 		vec_obs.reserve(100);
@@ -240,6 +248,31 @@ struct event_static_measurement
 		config.measure.add("sign_phase_re", std::real(config.param.sign_phase));
 		config.measure.add("sign_phase_im", std::imag(config.param.sign_phase));
 	}
+	
+	void init()
+	{
+		config.measure.add_observable("norm_error", n_prebin);
+		//config.measure.add_observable("td_norm_error", n_prebin);
+		//config.measure.add_observable("condition_number", n_prebin);
+		if (config.param.mu != 0 || config.param.stag_mu != 0)
+		{
+			config.measure.add_observable("n_re", n_prebin);
+			config.measure.add_observable("n_im", n_prebin);
+			config.measure.add_observable("n", n_prebin);
+		}
+		config.measure.add_observable("sign_phase_re", n_prebin);
+		config.measure.add_observable("sign_phase_im", n_prebin);
+		for (int i = 0; i < obs.size(); ++i)
+			config.measure.add_observable(names[i], n_prebin);
+		int N_path = (config.param.Lx / 2) + (config.param.Lx / 6)
+			+ (config.param.Lx / 3);
+		if (config.param.Lx % 2 != 0)
+			N_path += 1;
+		config.measure.add_vectorobservable("S_chernAA", N_path, n_prebin);
+		config.measure.add_vectorobservable("S_chernBB", N_path, n_prebin);
+		//config.measure.add_vectorobservable("S_chern_real_space", config.l.bonds("chern").size(), n_prebin);
+		//config.measure.add_vectorobservable("corr", config.l.max_distance() + 1, n_prebin);
+	}
 };
 
 struct event_dynamic_measurement
@@ -250,59 +283,105 @@ struct event_dynamic_measurement
 	Random& rng;
 	std::vector<std::vector<double>> dyn_tau;
 	std::vector<wick_base<matrix_t>> obs;
+	std::vector<vector_wick_base<matrix_t>> vec_obs;
 	std::vector<std::string> names;
+	std::vector<std::string> vec_names;
+	int n_prebin;
+	
+	std::chrono::steady_clock::time_point tp;
 
 	event_dynamic_measurement(configuration& config_, Random& rng_,
-		int n_prebin, const std::vector<std::string>& observables)
-		: config(config_), rng(rng_)
+		int n_prebin_, const std::vector<std::string>& observables)
+		: config(config_), rng(rng_), n_prebin(n_prebin_)
 	{
 		obs.reserve(100);
+		vec_obs.reserve(100);
 		for (int i = 0; i < observables.size(); ++i)
 		{
-			dyn_tau.push_back(std::vector<double>(2*config.param.n_discrete_tau+1,
-				0.));
-
 			if (observables[i] == "M2")
-				add_wick(wick_M2{config, rng});
+				add_wick(wick_M2{config, rng}, observables[i]);
 			else if (observables[i] == "kekule")
-				add_wick(wick_kekule{config, rng});
+				add_wick(wick_kekule{config, rng}, observables[i]);
 			else if (observables[i] == "epsilon")
-				add_wick(wick_epsilon{config, rng});
+				add_wick(wick_epsilon{config, rng}, observables[i]);
 			else if (observables[i] == "epsilon_V")
-				add_wick(wick_epsilon_V{config, rng});
+				add_wick(wick_epsilon_V{config, rng}, observables[i]);
 			else if (observables[i] == "epsilon_as")
-				add_wick(wick_epsilon_as{config, rng});
+				add_wick(wick_epsilon_as{config, rng}, observables[i]);
 			else if (observables[i] == "cdw_s")
-				add_wick(wick_cdw_s{config, rng});
+				add_wick(wick_cdw_s{config, rng}, observables[i]);
 			else if (observables[i] == "chern")
-				add_wick(wick_chern{config, rng});
+				add_wick(wick_chern{config, rng}, observables[i]);
 			else if (observables[i] == "gamma_mod")
-				add_wick(wick_gamma_mod{config, rng});
+				add_wick(wick_gamma_mod{config, rng}, observables[i]);
 			else if (observables[i] == "sp")
-				add_wick(wick_sp{config, rng});
+				add_wick(wick_sp{config, rng}, observables[i]);
+			else if (observables[i] == "sp_mat")
+				add_vector_wick(wick_sp_matrix{config, rng}, observables[i], 4);
 			else if (observables[i] == "tp")
-				add_wick(wick_tp{config, rng});
-
-			names.push_back("dyn_"+observables[i]);
+				add_wick(wick_tp{config, rng}, observables[i]);
 		}
+		for (int i = 0; i < obs.size(); ++i)
+			dyn_tau.push_back(std::vector<double>(2*config.param.n_discrete_tau+1, 0.));
+		for (int i = 0; i < vec_obs.size(); ++i)
+			for (int j = 0; j < vec_obs[i].n_values; ++j)
+				dyn_tau.push_back(std::vector<double>(2*config.param.n_discrete_tau+1, 0.));
+			
+		tp = std::chrono::steady_clock::now();
 	}
 
 	template<typename T>
-	void add_wick(T&& functor)
+	void add_wick(T&& functor, const std::string& name)
 	{
 		obs.push_back(wick_base<matrix_t>(std::forward<T>(functor)));
+		names.push_back(name);
+	}
+	
+	template<typename T>
+	void add_vector_wick(T&& functor, const std::string& name, int n_values)
+	{
+		vec_obs.push_back(vector_wick_base<matrix_t>(std::forward<T>(functor), n_values));
+		vec_names.push_back(name);
 	}
 
 	void trigger()
 	{
+		//std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
+		//std::cout << "Time between dynamic measurements: " << std::chrono::duration_cast<std::chrono::duration<float>>(t0 - tp).count() << std::endl;
+		
 		if (config.param.n_discrete_tau == 0)
 			return;
 		for (int i = 0; i < dyn_tau.size(); ++i)
 			std::fill(dyn_tau[i].begin(), dyn_tau[i].end(), 0.);
-		config.M.measure_dynamical_observable(dyn_tau, obs);
-
-		for (int i = 0; i < dyn_tau.size(); ++i)
-			if (config.param.n_discrete_tau > 0)
-				config.measure.add(names[i]+"_tau", dyn_tau[i]);
+		config.M.measure_dynamical_observable(dyn_tau, names, obs, vec_names, vec_obs);
+		
+		for (int i = 0; i < obs.size(); ++i)
+			config.measure.add("dyn_"+names[i]+"_tau", dyn_tau[i]);
+		int cnt = 0;
+		for (int i = 0; i < vec_obs.size(); ++i)
+			for (int j = 0; j < vec_obs[i].n_values; ++j)
+			{
+				config.measure.add("dyn_"+vec_names[i]+"_"+std::to_string(j)+"_tau", dyn_tau[obs.size()+cnt]);
+				++cnt;
+			}
+			
+		//std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+		//std::cout << "Time of dynamic measurement: " << std::chrono::duration_cast<std::chrono::duration<float>>(t1 - t0).count() << std::endl;
+		//tp = t1;
+	}
+	
+	void init()
+	{
+		for (int i = 0; i < obs.size(); ++i)
+		{
+			config.measure.add_vectorobservable("dyn_"+names[i]+"_tau",
+				config.param.n_discrete_tau + 1, n_prebin);
+		}
+		for (int i = 0; i < vec_obs.size(); ++i)
+			for (int j = 0; j < vec_obs[i].n_values; ++j)
+			{
+				config.measure.add_vectorobservable("dyn_"+vec_names[i]+"_"+std::to_string(j)+"_tau",
+					config.param.n_discrete_tau + 1, n_prebin);
+			}
 	}
 };
