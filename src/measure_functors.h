@@ -132,6 +132,6 @@ struct measure_M
 	
 	bool contains(const std::string& name)
 	{
-		return std::find(config.param.obs.begin(), config.param.obs.end(), name) != config.param.obs.end();
+		return std::find(config.param.static_obs.begin(), config.param.static_obs.end(), name) != config.param.static_obs.end();
 	}
 };
