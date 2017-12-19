@@ -130,6 +130,7 @@ class fast_update
 			dmatrix_t H0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			build_dirac_T(H0);
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H0);
+			//Eigen::ComplexEigenSolver<dmatrix_t> solver(H0);
 			expH0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			invExpH0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			for (int i = 0; i < expH0.rows(); ++i)
@@ -184,8 +185,8 @@ class fast_update
 					S_ao.col(j) = S_a.col(j);
 					for (int k = i; k < j; ++k)
 					{
-						S_so.col(j) -= S_so.col(k) * (S_so.col(k).dot(S_s.col(j)));
-						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).dot(S_a.col(j)));
+						S_so.col(j) -= S_so.col(k) * (S_so.col(k).adjoint() * S_s.col(j));
+						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).adjoint() * S_a.col(j));
 					}
 					//std::cout << "E=" << en(i) << ", orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
 					if (S_so.col(j).norm() > epsilon)
@@ -211,7 +212,7 @@ class fast_update
 			return S_f.leftCols(S.cols());
 		}
 		
-		dmatrix_t ph_symmetrize_EV(const dmatrix_t& S, const dmatrix_t& pm)
+		dmatrix_t ph_symmetrize_EV(const dmatrix_t& S, const dmatrix_t& pm, const dmatrix_t& inv_pm)
 		{
 			double epsilon = std::pow(10., -4.);
 
@@ -247,8 +248,8 @@ class fast_update
 					S_ao.col(j) = S_a.col(j);
 					for (int k = i; k < j; ++k)
 					{
-						S_so.col(j) -= S_so.col(k) * (S_so.col(k).dot(S_s.col(j)));
-						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).dot(S_a.col(j)));
+						S_so.col(j) -= S_so.col(k) * (S_so.col(k).adjoint() * S_s.col(j));
+						S_ao.col(j) -= S_ao.col(k) * (S_ao.col(k).adjoint() * S_a.col(j));
 					}
 					//std::cout << "orth: i=" << i << ", j=" << j << ": " << S_so.col(j).norm() << " " << S_ao.col(j).norm() << std::endl;
 					if (S_so.col(j).norm() > epsilon)
@@ -332,8 +333,8 @@ class fast_update
 					for (int k = 0; k < j; ++k)
 					{
 						int a = energy_blocks[i][k];
-						S_so.col(b) -= S_so.col(a) * (S_so.col(a).dot(S_s.col(b)));
-						S_ao.col(b) -= S_ao.col(a) * (S_ao.col(a).dot(S_a.col(b)));
+						S_so.col(b) -= S_so.col(a) * (S_so.col(a).adjoint() * S_s.col(b));
+						S_ao.col(b) -= S_ao.col(a) * (S_ao.col(a).adjoint() * S_a.col(b));
 					}
 					std::cout << "E=" << en(b) << ", orth: i=" << i << ", b=" << b << ": " << S_so.col(b).norm() << " " << S_ao.col(b).norm() << std::endl;
 					if (S_so.col(b).norm() > epsilon)
@@ -358,59 +359,155 @@ class fast_update
 			return S_f.leftCols(S.cols());
 		}
 		
+		/*
 		void select_ph_states(const dmatrix_t& S, const dmatrix_t& ev, const std::vector<std::vector<int>>& energy_blocks, const dmatrix_t& H, const dmatrix_t& pm)
 		{
 			double epsilon = std::pow(10., -4.);
 			for (int i = 0; i < n_matrix_size/2; ++i)
 			{
-				Eigen::VectorXd u_s = (S.col(i) + S.col(n_matrix_size/2+i))/std::sqrt(2.);
-				Eigen::VectorXd u_a = (S.col(i) - S.col(n_matrix_size/2+i))/std::sqrt(2.);
-				std::cout << "i = " << i << ", P_s = " << std::real(u_s.dot(H * u_s)) << std::endl;
-				std::cout << "i = " << i << ", P_a = " << std::real(u_a.dot(H * u_a)) << std::endl;
-				for (int j = 0; j < n_matrix_size/2; ++j)
-				{
-					double x = std::abs((pm*ev.col(i)).dot(ev.col(n_matrix_size/2+j)));
-					if (x > epsilon)
-						std::cout << "x = " << x << ", i = " << i << ", j = " << n_matrix_size/2+j << std::endl;
-				}
+				Eigen::VectorXcd u_s = (S.col(i) + S.col(n_matrix_size/2+i))/std::sqrt(2.);
+				Eigen::VectorXcd u_a = (S.col(i) - S.col(n_matrix_size/2+i))/std::sqrt(2.);
+				std::cout << "i = " << i << ", P_s = " << std::real(u_s.adjoint() * H * u_s) << std::endl;
+				std::cout << "i = " << i << ", P_a = " << std::real(u_a.adjoint() * H * u_a) << std::endl;
 			}
 		}
+		*/
 		
-		Eigen::MatrixXcd symmetrize_rot_EV(const dmatrix_t& S, const Eigen::VectorXd& en, const std::vector<std::vector<int>>& energy_blocks, const dmatrix_t& pm)
+		std::vector<std::vector<int>> get_energy_levels(const Eigen::VectorXd& en)
 		{
 			double epsilon = std::pow(10., -4.);
-			Eigen::MatrixXcd S_f = dmatrix_t::Zero(n_matrix_size, S.cols());
-
-			for (int i = 0; i < energy_blocks.size(); ++i)
+			std::vector<std::vector<int>> energy_levels;
+			energy_levels.push_back({0});
+			for (int i = 1; i < n_matrix_size; ++i)
 			{
-				int N = energy_blocks[i].size();
-				dmatrix_t projP(N, N);
-				for (int j = 0; j < N; ++j)
-					for (int k = 0; k < N; ++k)
-						projP(j, k) = S.col(energy_blocks[i][j]).dot(pm * S.col(energy_blocks[i][k]));
-					
-				Eigen::EigenSolver<dmatrix_t> solver(projP);
-				std::cout << "Projected eigenvalues: i = " << i << std::endl;
-				for (int j = 0; j < N; ++j)
-					std::cout << solver.eigenvalues()[j] << std::endl;
-				for (int j = 0; j < N; ++j)
-					for (int k = 0; k < N; ++k)
-						S_f.col(energy_blocks[i][j]) += solver.eigenvectors()(k, j) * S.col(energy_blocks[i][k]);
+				if (std::abs(en(i) - en(energy_levels.back()[0])) > epsilon)
+					energy_levels.push_back(std::vector<int>());
+				energy_levels.back().push_back(i);
 			}
-			for (int i = 0; i < S.cols(); ++i)
+			for (int i = 0; i < energy_levels.size(); ++i)
+				std::sort(energy_levels[i].begin(), energy_levels[i].end());
+			return energy_levels;
+		}
+		
+		dmatrix_t orthonormalize(const dmatrix_t& S)
+		{
+			double epsilon = std::pow(10., -4.);
+			dmatrix_t S_o = S, S_f = dmatrix_t::Zero(S.rows(), S.cols());
+			
+			for (int i = 0; i < S_o.cols(); ++i)
 			{
+				if (S_o.col(i).norm() > epsilon)
+					S_o.col(i) /= S_o.col(i).norm();
+				else
+					S_o.col(i) *= 0.;
+			}
+
+			for (int i = 0; i < S_o.cols(); ++i)
+			{
+				S_f.col(i) = S_o.col(i);
+				for (int k = 0; k < i; ++k)
+					S_f.col(i) -= S_f.col(k) * (S_f.col(k).adjoint() * S_o.col(i));
+				
 				if (S_f.col(i).norm() > epsilon)
 					S_f.col(i) /= S_f.col(i).norm();
-				else
-					S_f.col(i) *= 0.;
 			}
+			return S_f;
+		}
+		
+		void split_quantum_numbers(std::vector<std::vector<int>>& energy_levels, const dmatrix_t& S, const dmatrix_t& pm)
+		{
+			double epsilon = std::pow(10., -4.);
+			for (int i = 0; i < energy_levels.size(); ++i)
+			{
+				std::vector<std::vector<int>> sub_levels;
+				std::vector<numeric_t> quantum_numbers;
+				sub_levels.push_back({energy_levels[i][0]});
+				quantum_numbers.push_back(S.col(energy_levels[i][0]).adjoint() * pm * S.col(energy_levels[i][0]));
+				for (int j = 1; j < energy_levels[i].size(); ++j)
+				{
+					numeric_t q = S.col(energy_levels[i][j]).adjoint() * pm * S.col(energy_levels[i][j]);
+					int k;
+					for (k = 0; k < quantum_numbers.size();)
+						if (std::abs(quantum_numbers[k] - q) > epsilon)
+							++k;
+						else
+							break;
+					if (k == quantum_numbers.size())
+					{
+						quantum_numbers.push_back(q);
+						sub_levels.push_back({energy_levels[i][j]});
+					}
+					else
+						sub_levels[k].push_back(energy_levels[i][j]);
+				}
+				//for (int k = 0; k < quantum_numbers.size(); ++k)
+				//	for (int j = 0; j < sub_levels[k].size(); ++j)
+				//	std::cout << "sublevel k = " << k << ", j = " << j << ": " << sub_levels[k][j] << std::endl;
+				energy_levels.erase(energy_levels.begin() + i);
+				for (int k = 0; k < quantum_numbers.size(); ++k)
+					energy_levels.insert(energy_levels.begin()+i, sub_levels[sub_levels.size()-1-k]);
+			}
+			for (int i = 0; i < energy_levels.size(); ++i)
+				std::sort(energy_levels[i].begin(), energy_levels[i].end());
+		}
+		
+		dmatrix_t project_symmetry(const dmatrix_t& S, const std::vector<std::vector<int>>& energy_levels, const dmatrix_t& pm)
+		{
+			double epsilon = std::pow(10., -4.);
+			dmatrix_t S_f = dmatrix_t::Zero(n_matrix_size, S.cols());
 			
+			for (int i = 0; i < energy_levels.size(); ++i)
+			{
+				int N = energy_levels[i].size();
+				dmatrix_t projP(N, N);
+				dmatrix_t S_proj = dmatrix_t::Zero(n_matrix_size, N);
+				for (int j = 0; j < N; ++j)
+					for (int k = 0; k < N; ++k)
+						projP(j, k) = S.col(energy_levels[i][j]).adjoint() * pm * S.col(energy_levels[i][k]);
+					
+				Eigen::ComplexEigenSolver<dmatrix_t> solver(projP);
+				//std::cout << "Projected eigenvalues: i = " << i << std::endl;
+				//for (int j = 0; j < N; ++j)
+				//	std::cout << solver.eigenvalues()[j] << std::endl;
+				for (int j = 0; j < N; ++j)
+					for (int k = 0; k < N; ++k)
+						S_proj.col(j) += solver.eigenvectors()(k, j) * S.col(energy_levels[i][k]);
+				S_proj = orthonormalize(S_proj);
+				for (int j = 0; j < N; ++j)
+					S_f.col(energy_levels[i][j]) = S_proj.col(j);
+			}
+			return S_f;
+		}
+		
+		dmatrix_t project_ph_symmetry(const dmatrix_t& S, const dmatrix_t& pm)
+		{
+			double epsilon = std::pow(10., -4.);
+			dmatrix_t S_f = dmatrix_t::Zero(n_matrix_size, S.cols());
+			
+			int N = S.cols();
+			dmatrix_t projP(N, N);
+			dmatrix_t S_proj = dmatrix_t::Zero(n_matrix_size, N);
+			for (int j = 0; j < N; ++j)
+				for (int k = 0; k < N; ++k)
+					projP(j, k) = S.col(j).adjoint() * pm * S.col(k);
+				
+			Eigen::ComplexEigenSolver<dmatrix_t> solver(projP);
+			std::cout << "PH Projected eigenvalues:" << std::endl;
+			for (int j = 0; j < N; ++j)
+				std::cout << solver.eigenvalues()[j] << std::endl;
+			for (int j = 0; j < N; ++j)
+				for (int k = 0; k < N; ++k)
+					S_proj.col(j) += solver.eigenvectors()(k, j) * S.col(k);
+			S_proj = orthonormalize(S_proj);
+			for (int j = 0; j < N; ++j)
+				S_f.col(j) = S_proj.col(j);
 			return S_f;
 		}
 		
 		void get_trial_wavefunction(const dmatrix_t& H)
 		{
 			Eigen::SelfAdjointEigenSolver<dmatrix_t> solver(H);
+			//Eigen::ComplexEigenSolver<dmatrix_t> solver(H);
 			if (l.n_sites() % 3 != 0)
 			{
 				P = solver.eigenvectors().leftCols(n_matrix_size/2);
@@ -419,65 +516,171 @@ class fast_update
 			}
 			dmatrix_t inv_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size),
 				ph_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size),
-				rot60_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
+				rot60_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size),
+				rot120_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size),
+				sv_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size),
+				sh_pm = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 			for (int i = 0; i < n_matrix_size; ++i)
 			{
 				inv_pm(i, l.inverted_site(i)) = 1.;
 				rot60_pm(i, l.rotated_site(i, 60.)) = 1.;
+				rot120_pm(i, l.rotated_site(i, 120.)) = 1.;
+				sv_pm(i, l.reflected_v_site(i)) = 1.;
+				sh_pm(i, l.reflected_h_site(i)) = 1.;
 				ph_pm(i, i) = l.parity(i);
 			}
 			
 			double epsilon = std::pow(10., -4.);
-			numeric_t total_inv_parity = 1, total_ph_parity = 1;
+			numeric_t total_inv_parity = 1, total_rot60_parity = 1, total_rot120_parity = 1, total_ph_parity = 1;
+			std::vector<numeric_t> inv_parity(n_matrix_size), rot60_parity(n_matrix_size), rot120_parity(n_matrix_size), ph_2p_parity(6);
+			std::vector<std::vector<int>> energy_levels = get_energy_levels(solver.eigenvalues());
+			
 			auto S_f = symmetrize_EV(solver.eigenvectors(), solver.eigenvalues(), inv_pm);
-			std::vector<numeric_t> inv_parity(n_matrix_size), ph_2p_parity(6);
+			/*
+			auto S_f = project_symmetry(solver.eigenvectors(), energy_levels, inv_pm);
+			split_quantum_numbers(energy_levels, S_f, inv_pm);
+			
+			S_f = project_symmetry(S_f, energy_levels, rot60_pm);
+			split_quantum_numbers(energy_levels, S_f, rot60_pm);
+			
+			S_f = project_symmetry(S_f, energy_levels, rot120_pm);
+			split_quantum_numbers(energy_levels, S_f, rot120_pm);
+			
+			S_f = project_symmetry(S_f, energy_levels, sv_pm);
+			split_quantum_numbers(energy_levels, S_f, sv_pm);
+			
+			S_f = project_symmetry(S_f, energy_levels, sh_pm);
+			split_quantum_numbers(energy_levels, S_f, sh_pm);
+			*/
+			
+			//for (int i = 0; i < energy_levels.size(); ++i)
+			//	for (int j = 0; j < energy_levels[i].size(); ++j)
+			//		std::cout << "i = " << i << ", j = " << energy_levels[i][j] << std::endl;
+			
+			///////////////////
+			
+			/*
+			std::cout << "P_inv + P_ph = " << (inv_pm * ph_pm + ph_pm * inv_pm).norm() << std::endl;
+			std::cout << "P_rot60 + P_ph = " << (rot60_pm * ph_pm + ph_pm * rot60_pm).norm() << std::endl;
+			std::cout << "P_rot120 - P_ph = " << (rot120_pm * ph_pm - ph_pm * rot120_pm).norm() << std::endl;
+			std::cout << "P_inv - P_rot60 = " << (inv_pm * rot60_pm - rot60_pm * inv_pm).norm() << std::endl;
+			std::cout << "P_inv - P_rot120 = " << (inv_pm * rot120_pm - rot120_pm * inv_pm).norm() << std::endl;
+			std::cout << "P_rot60 - P_rot120 = " << (rot60_pm * rot120_pm - rot120_pm * rot60_pm).norm() << std::endl;
+			
+			std::cout << "Single particle eigenvalues:" << std::endl;
 			for (int i = 0; i < n_matrix_size; ++i)
-				inv_parity[i] = std::real(S_f.col(i).dot(inv_pm * S_f.col(i)));
+				std::cout << "E(" << i << ") = " << solver.eigenvalues()[i] << ", P_inv = " << S_f.col(i).adjoint() * inv_pm * S_f.col(i)
+					<< ", P_rot60 = " << S_f.col(i).adjoint() * rot60_pm * S_f.col(i)
+					<< ", P_rot120 = " << S_f.conjugate().col(i).adjoint() * rot120_pm * S_f.conjugate().col(i)
+					<< ", P_sv = " << S_f.conjugate().col(i).adjoint() * sv_pm * S_f.conjugate().col(i) 
+					<< ", P_sh = " << S_f.conjugate().col(i).adjoint() * sh_pm * S_f.conjugate().col(i) << std::endl;
+			std::cout << "-----" << std::endl;
+			std::cout << "Conjugate single particle eigenvalues:" << std::endl;
+			for (int i = 0; i < n_matrix_size; ++i)
+				std::cout << "E(" << i << ") = " << solver.eigenvalues()[i] << ", P_inv = " << S_f.conjugate().col(i).adjoint() * inv_pm * S_f.conjugate().col(i)
+					<< ", P_rot60 = " << S_f.conjugate().col(i).adjoint() * rot60_pm * S_f.conjugate().col(i)
+					<< ", P_rot120 = " << S_f.conjugate().col(i).adjoint() * rot120_pm * S_f.conjugate().col(i)
+					<< ", P_sv = " << S_f.conjugate().col(i).adjoint() * sv_pm * S_f.conjugate().col(i) 
+					<< ", P_sh = " << S_f.conjugate().col(i).adjoint() * sh_pm * S_f.conjugate().col(i) << std::endl;
+			std::cout << "-----" << std::endl;
+			*/
+			
+			///////////////////
 			
 			dmatrix_t ph_1p_block = S_f.block(0, n_matrix_size/2-2, n_matrix_size, 4);
 			Eigen::VectorXd ph_ev = Eigen::VectorXd::Zero(4);
-			//std::cout << "PH first" << std::endl;
+			
+			/*
+			std::cout << "before symm_ph" << std::endl;
+			for (int i = 0; i < 4; ++i)
+				std::cout << "P_inv = " << ph_1p_block.col(i).adjoint() * inv_pm * ph_1p_block.col(i)
+					<< ", P_rot60 = " << ph_1p_block.col(i).adjoint() * rot60_pm * ph_1p_block.col(i)
+					<< ", P_rot120 = " << ph_1p_block.col(i).adjoint() * rot120_pm * ph_1p_block.col(i) << std::endl;
+			std::cout << "|0 + 1| = " << (ph_1p_block.col(0) + (ph_pm * ph_1p_block.col(1))).norm() << std::endl;
+			std::cout << "|1 - 0| = " << (ph_1p_block.col(1) - (ph_pm * ph_1p_block.col(0))).norm() << std::endl;
+			std::cout << "|0 + 2| = " << (ph_1p_block.col(0) + (ph_pm * ph_1p_block.col(2))).norm() << std::endl;
+			std::cout << "|2 - 0| = " << (ph_1p_block.col(2) - (ph_pm * ph_1p_block.col(0))).norm() << std::endl;
+			std::cout << "|0 + 3| = " << (ph_1p_block.col(0) + (ph_pm * ph_1p_block.col(3))).norm() << std::endl;
+			std::cout << "|3 - 0| = " << (ph_1p_block.col(3) - (ph_pm * ph_1p_block.col(0))).norm() << std::endl;
+			*/
+			
 			ph_1p_block = symmetrize_EV(ph_1p_block, ph_ev, ph_pm);
+			//ph_1p_block = project_ph_symmetry(ph_1p_block, ph_pm);
+			
+			ph_1p_block = ph_symmetrize_EV(ph_1p_block, ph_pm, inv_pm);
+
 			for (int i = 0; i < ph_1p_block.cols(); ++i)
-				numeric_t inv_p = std::real(ph_1p_block.col(i).dot(inv_pm * ph_1p_block.col(i)));
-			//std::cout << "PH second" << std::endl;
-			ph_1p_block = ph_symmetrize_EV(ph_1p_block, ph_pm);
-			for (int i = 0; i < ph_1p_block.cols(); ++i)
-			{
-				numeric_t inv_p = std::real(ph_1p_block.col(i).dot(inv_pm * ph_1p_block.col(i)));
-				ph_2p_parity[i] = std::real(ph_1p_block.col(i).dot(ph_pm * ph_1p_block.col(i)));
-				//std::cout << i << ": e = " << ph_ev[i] << ", P = " << inv_p << ", PH = " << ph_2p_parity[i] << std::endl;
-			}
+				ph_2p_parity[i] = ph_1p_block.col(i).adjoint() * ph_pm * ph_1p_block.col(i);
 			std::vector<dmatrix_t> ph_2p_block(6, dmatrix_t(n_matrix_size, 2));
-			//PH = 1
+			
+			//PH = -1
 			ph_2p_block[0].col(0) = ph_1p_block.col(0);
 			ph_2p_block[0].col(1) = ph_1p_block.col(3);
 			ph_2p_block[1].col(0) = ph_1p_block.col(1);
 			ph_2p_block[1].col(1) = ph_1p_block.col(2);
 			//ph_2p_block[2].col(0) = (ph_1p_block.col(0) - ph_1p_block.col(2))/std::sqrt(2.);
 			//ph_2p_block[2].col(1) = (ph_1p_block.col(1) - ph_1p_block.col(3))/std::sqrt(2.);
-			//PH = -1
+			//PH = 1
 			ph_2p_block[3].col(0) = ph_1p_block.col(0);
 			ph_2p_block[3].col(1) = ph_1p_block.col(1);
 			ph_2p_block[4].col(0) = ph_1p_block.col(2);
 			ph_2p_block[4].col(1) = ph_1p_block.col(3);
 			//ph_2p_block[5].col(0) = (ph_1p_block.col(0) + ph_1p_block.col(2))/std::sqrt(2.);
 			//ph_2p_block[5].col(1) = (ph_1p_block.col(1) + ph_1p_block.col(3))/std::sqrt(2.);
-			ph_2p_parity = {-1., -1., -1., 1., 1., 1.};
-			std::vector<numeric_t> inv_2p_parity;// = {-1., -1., -1., 1., 1., -1.};
-			inv_2p_parity.push_back(ph_2p_block[0].col(0).dot(inv_pm * ph_2p_block[0].col(0))
-				* ph_2p_block[0].col(1).dot(inv_pm * ph_2p_block[0].col(1)));
-			inv_2p_parity.push_back(ph_2p_block[1].col(0).dot(inv_pm * ph_2p_block[1].col(0))
-				* ph_2p_block[1].col(1).dot(inv_pm * ph_2p_block[1].col(1)));
-			inv_2p_parity.push_back(ph_1p_block.col(0).dot(inv_pm * ph_1p_block.col(0))
-				* ph_1p_block.col(2).dot(inv_pm * ph_1p_block.col(2)));
 			
-			inv_2p_parity.push_back(ph_2p_block[3].col(0).dot(inv_pm * ph_2p_block[3].col(0))
-				* ph_2p_block[3].col(1).dot(inv_pm * ph_2p_block[3].col(1)));
-			inv_2p_parity.push_back(ph_2p_block[4].col(0).dot(inv_pm * ph_2p_block[4].col(0))
-				* ph_2p_block[4].col(1).dot(inv_pm * ph_2p_block[4].col(1)));
-			inv_2p_parity.push_back(ph_1p_block.col(0).dot(inv_pm * ph_1p_block.col(0))
-				* ph_1p_block.col(2).dot(inv_pm * ph_1p_block.col(2)));
+			ph_2p_parity = {-1., -1., -1., 1., 1., 1.};
+			std::vector<numeric_t> inv_2p_parity;
+			inv_2p_parity.push_back(ph_2p_block[0].col(0).adjoint() * inv_pm * ph_2p_block[0].col(0)
+				* ph_2p_block[0].col(1).adjoint() * inv_pm * ph_2p_block[0].col(1));
+			inv_2p_parity.push_back(ph_2p_block[1].col(0).adjoint() * inv_pm * ph_2p_block[1].col(0)
+				* ph_2p_block[1].col(1).adjoint() * inv_pm * ph_2p_block[1].col(1));
+			numeric_t p1 = ph_1p_block.col(0).adjoint() * inv_pm * ph_1p_block.col(0)
+				* ph_1p_block.col(2).adjoint() * inv_pm * ph_1p_block.col(2);
+			numeric_t p2 = ph_1p_block.col(1).adjoint() * inv_pm * ph_1p_block.col(1)
+				* ph_1p_block.col(3).adjoint() * inv_pm * ph_1p_block.col(3);
+			inv_2p_parity.push_back((p1 - p2)/std::sqrt(2.));
+			
+			inv_2p_parity.push_back(ph_2p_block[3].col(0).adjoint() * inv_pm * ph_2p_block[3].col(0)
+				* ph_2p_block[3].col(1).adjoint() * inv_pm * ph_2p_block[3].col(1));
+			inv_2p_parity.push_back(ph_2p_block[4].col(0).adjoint() * inv_pm * ph_2p_block[4].col(0)
+				* ph_2p_block[4].col(1).adjoint() * inv_pm * ph_2p_block[4].col(1));
+			inv_2p_parity.push_back(ph_1p_block.col(0).adjoint() * inv_pm * ph_1p_block.col(0)
+				* ph_1p_block.col(2).adjoint() * inv_pm * ph_1p_block.col(2));
+			inv_2p_parity.push_back((p1 + p2)/std::sqrt(2.));
+			
+			std::vector<numeric_t> rot60_2p_parity;
+			rot60_2p_parity.push_back(ph_2p_block[0].col(0).adjoint() * rot60_pm * ph_2p_block[0].col(0)
+				* ph_2p_block[0].col(1).adjoint() * rot60_pm * ph_2p_block[0].col(1));
+			rot60_2p_parity.push_back(ph_2p_block[1].col(0).adjoint() * rot60_pm * ph_2p_block[1].col(0)
+				* ph_2p_block[1].col(1).adjoint() * rot60_pm * ph_2p_block[1].col(1));
+			p1 = ph_1p_block.col(0).adjoint() * rot60_pm * ph_1p_block.col(0)
+				* ph_1p_block.col(2).adjoint() * rot60_pm * ph_1p_block.col(2);
+			p2 = ph_1p_block.col(1).adjoint() * rot60_pm * ph_1p_block.col(1)
+				* ph_1p_block.col(3).adjoint() * rot60_pm * ph_1p_block.col(3);
+			rot60_2p_parity.push_back((p1 - p2)/std::sqrt(2.));
+			
+			rot60_2p_parity.push_back(ph_2p_block[3].col(0).adjoint() * rot60_pm * ph_2p_block[3].col(0)
+				* ph_2p_block[3].col(1).adjoint() * rot60_pm * ph_2p_block[3].col(1));
+			rot60_2p_parity.push_back(ph_2p_block[4].col(0).adjoint() * rot60_pm * ph_2p_block[4].col(0)
+				* ph_2p_block[4].col(1).adjoint() * rot60_pm * ph_2p_block[4].col(1));
+			rot60_2p_parity.push_back((p1 + p2)/std::sqrt(2.));
+			
+			std::vector<numeric_t> rot120_2p_parity;
+			rot120_2p_parity.push_back(ph_2p_block[0].col(0).adjoint() * rot120_pm * ph_2p_block[0].col(0)
+				* ph_2p_block[0].col(1).adjoint() * rot120_pm * ph_2p_block[0].col(1));
+			rot120_2p_parity.push_back(ph_2p_block[1].col(0).adjoint() * rot120_pm * ph_2p_block[1].col(0)
+				* ph_2p_block[1].col(1).adjoint() * rot120_pm * ph_2p_block[1].col(1));
+			p1 = ph_1p_block.col(0).adjoint() * rot120_pm * ph_1p_block.col(0)
+				* ph_1p_block.col(2).adjoint() * rot120_pm * ph_1p_block.col(2);
+			p2 = ph_1p_block.col(1).adjoint() * rot120_pm * ph_1p_block.col(1)
+				* ph_1p_block.col(3).adjoint() * rot120_pm * ph_1p_block.col(3);
+			rot120_2p_parity.push_back((p1 - p2)/std::sqrt(2.));
+			
+			rot120_2p_parity.push_back(ph_2p_block[3].col(0).adjoint() * rot120_pm * ph_2p_block[3].col(0)
+				* ph_2p_block[3].col(1).adjoint() * rot120_pm * ph_2p_block[3].col(1));
+			rot120_2p_parity.push_back(ph_2p_block[4].col(0).adjoint() * rot120_pm * ph_2p_block[4].col(0)
+				* ph_2p_block[4].col(1).adjoint() * rot120_pm * ph_2p_block[4].col(1));
+			rot120_2p_parity.push_back((p1 + p2)/std::sqrt(2.));
 			
 			/////////////////
 			
@@ -487,25 +690,26 @@ class fast_update
 			//ph_Np_block = symmetrize_ph_blocks(ph_Np_block, energy_blocks, solver.eigenvalues(), ph_pm);
 			//select_ph_states(ph_Np_block, S_f.block(0, 0, n_matrix_size, n_matrix_size), energy_blocks, H, ph_pm);
 			
-			//%%%%%%%%%%
-			
-			auto energy_blocks = get_energy_blocks(solver.eigenvalues());
-			auto S_rot = symmetrize_rot_EV(S_f, solver.eigenvalues(), energy_blocks, rot60_pm);
-			std::cout << "Single particle eigenvalues:" << std::endl;
-			for (int i = 0; i < n_matrix_size; ++i)
-				std::cout << "i = " << i << ", " << S_rot.col(i).adjoint() * rot60_pm * S_rot.col(i) << std::endl;
-			
 			/////////////////
 			
 			P.resize(n_matrix_size, n_matrix_size / 2);
+			for (int i = 0; i < n_matrix_size; ++i)
+			{
+				inv_parity[i] = S_f.col(i).adjoint() * inv_pm * S_f.col(i);
+				rot60_parity[i] = S_f.col(i).adjoint() * rot60_pm * S_f.col(i);
+				rot120_parity[i] = S_f.col(i).adjoint() * rot120_pm * S_f.col(i);
+			}
 			for (int i = 0; i < n_matrix_size/2-2; ++i)
 			{
 				total_inv_parity *= inv_parity[i];
+				total_rot60_parity *= rot60_parity[i];
+				total_rot120_parity *= rot60_parity[i];
 				P.col(i) = S_f.col(i);
 			}
 			//for (int i = 0; i < ph_2p_block.size(); ++i)
-			//	std::cout << "i = " << i << ": E = 0, total invP = " << total_inv_parity*inv_2p_parity[i] << ", invP = " << inv_2p_parity[i] << ", phP = " << ph_2p_parity[i] << std::endl;
-			int indices[] = {0, 1, 3, 4};
+			//	std::cout << "i = " << i << ": E = 0, invP = " << total_inv_parity*inv_2p_parity[i] << ", rot60P = " << total_rot60_parity*rot60_2p_parity[i]
+			//		<< ", rot120P = " << total_rot120_parity*rot120_2p_parity[i] << ", phP = " << ph_2p_parity[i] << std::endl;
+			int indices[] = {0, 1, 2, 3, 4, 5};
 			for (int i = 0; i < 4; ++i)
 				if (std::abs(total_inv_parity * inv_2p_parity[indices[i]] - param.inv_symmetry) < epsilon)
 				{
@@ -894,8 +1098,6 @@ class fast_update
 				//	b *= expH0;
 				
 				
-				
-				
 				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
 					for (int beta = 0; beta < param.n_flavor; ++beta)
 					{
@@ -920,7 +1122,7 @@ class fast_update
 					for (int beta = param.n_flavor - 1; beta >= 0; --beta)
 						for (int bt = nn_bonds.size() - 1; bt >= 0; --bt)
 							multiply_Gamma_matrix(bt, alpha, beta);
-						
+				
 				
 				
 				//multiply_T_matrix();
@@ -928,7 +1130,6 @@ class fast_update
 			else if (param.direction == -1)
 			{
 				//multiply_T_matrix();
-				
 				
 				
 				for (int alpha = 0; alpha < param.n_flavor; ++alpha)
@@ -1085,7 +1286,7 @@ class fast_update
 			{
 				numeric_t n = 0.;
 				for (int i = 0; i < l.n_sites(); ++i)
-					n += equal_time_gf(i, i) / numeric_t(l.n_sites());
+					n += equal_time_gf(i, i) / static_cast<double>(l.n_sites());
 				measure.add("n_re", std::real(n*param.sign_phase));
 				measure.add("n_im", std::imag(n*param.sign_phase));
 				measure.add("n", std::real(n));

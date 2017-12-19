@@ -98,14 +98,17 @@ struct event_flip_all
 	{
 		if (config.param.direction == 1)
 			config.M.multiply_Gamma_matrix(bond_type, alpha, beta);
-		for (auto& bond : config.M.get_nn_bonds(bond_type))
+		if (config.param.V > 0.)
 		{
-			std::complex<double> p_0 = config.M.try_ising_flip(bond.first, bond.second, alpha, beta);
-			config.param.sign_phase *= std::exp(std::complex<double>(0, std::arg(p_0)));
-			if (rng() < std::abs(p_0))
+			for (auto& bond : config.M.get_nn_bonds(bond_type))
 			{
-				config.M.update_equal_time_gf_after_flip();
-				config.M.flip_spin({bond.first, bond.second});
+				std::complex<double> p_0 = config.M.try_ising_flip(bond.first, bond.second, alpha, beta);
+				config.param.sign_phase *= std::exp(std::complex<double>(0, std::arg(p_0)));
+				if (rng() < std::abs(p_0))
+				{
+					config.M.update_equal_time_gf_after_flip();
+					config.M.flip_spin({bond.first, bond.second});
+				}
 			}
 		}
 		if (config.param.direction == -1)
@@ -114,37 +117,31 @@ struct event_flip_all
 
 	void trigger()
 	{
-		if (config.param.V > 0.)
+		if (config.param.direction == 1)
 		{
-			if (config.param.direction == 1)
-			{
-				config.M.update_tau();
-				config.M.multiply_T_matrix();
-				
-				for (int alpha = 0; alpha < config.param.n_flavor; ++alpha)
-					for (int beta = 0; beta < config.param.n_flavor; ++beta)
-						for (int bt = config.M.n_cb_bonds() - 1; bt >= 0; --bt)
-							flip_cb(bt, alpha, beta);
-						
-				
-				
-				//config.M.multiply_T_matrix();
-			}
-			else if (config.param.direction == -1)
-			{
-				//config.M.multiply_T_matrix();
-				
-				
-				
-				
-				for (int alpha = config.param.n_flavor - 1; alpha >= 0; --alpha)
-					for (int beta = config.param.n_flavor - 1; beta >= 0; --beta)
-						for (int bt = 0; bt < config.M.n_cb_bonds(); ++bt)
-							flip_cb(bt, alpha, beta);
-				
-				config.M.update_tau();
-				config.M.multiply_T_matrix();
-			}
+			config.M.update_tau();
+			config.M.multiply_T_matrix();
+			
+			for (int alpha = 0; alpha < config.param.n_flavor; ++alpha)
+				for (int beta = 0; beta < config.param.n_flavor; ++beta)
+					for (int bt = config.M.n_cb_bonds() - 1; bt >= 0; --bt)
+						flip_cb(bt, alpha, beta);
+			
+			
+			//config.M.multiply_T_matrix();
+		}
+		else if (config.param.direction == -1)
+		{
+			//config.M.multiply_T_matrix();
+			
+			
+			for (int alpha = config.param.n_flavor - 1; alpha >= 0; --alpha)
+				for (int beta = config.param.n_flavor - 1; beta >= 0; --beta)
+					for (int bt = 0; bt < config.M.n_cb_bonds(); ++bt)
+						flip_cb(bt, alpha, beta);
+			
+			config.M.update_tau();
+			config.M.multiply_T_matrix();
 		}
 	}
 	

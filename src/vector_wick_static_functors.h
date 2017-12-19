@@ -77,7 +77,7 @@ struct wick_static_S_chernAA
 					- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first])
 					/ std::pow(config.l.n_bonds(), 2);
 				for (int k = 0; k < nq; ++k)
-					values[k] += ch * fourier_coeff[(i/3)*(N/3)*nq + (j/3)*nq + k];
+					values[k] += std::real(ch * fourier_coeff[(i/3)*(N/3)*nq + (j/3)*nq + k]);
 			}
 		}
 		return values;
@@ -107,10 +107,10 @@ struct wick_static_S_chern_real_space
 		for (int j = 0; j < N; ++j)
 		{
 			auto& b = bonds[j];
-			values[j] = -2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+			values[j] = std::real(-2.*(ca_et_gf_0[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
 				+ ca_et_gf_0[b.second*ns+a.first] * ca_et_gf_0[b.first*ns+a.second]
 				- ca_et_gf_0[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
-				- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first]);
+				- ca_et_gf_0[b.second*ns+a.second] * ca_et_gf_0[b.first*ns+a.first]));
 		}
 		return values;
 	}
