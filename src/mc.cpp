@@ -105,6 +105,7 @@ mc::mc(const std::string& dir)
 	qmc.add_event(event_flip_all{config, rng}, "flip all");
 	qmc.add_event(event_static_measurement{config, rng, config.param.n_tau_slices / n_static_cycles,
 		config.param.static_obs}, "static_measure");
+	//qmc.add_event(event_static_measurement{config, rng, 1, config.param.static_obs}, "static_measure");
 	qmc.add_event(event_dynamic_measurement{config, rng, n_prebin, config.param.obs},
 		"dyn_measure");
 
