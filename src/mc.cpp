@@ -58,7 +58,9 @@ mc::mc(const std::string& dir)
 	config.param.kappa = std::acosh(std::exp(config.param.W * config.param.dtau / 2.));
 	config.param.inv_symmetry = pars.value_or_default<double>("inv_symmetry", 1);
 	config.param.ph_symmetry = pars.value_or_default<double>("ph_symmetry", 1);
+	config.param.slater = pars.value_or_default<int>("slater_state", 0);
 	config.param.n_flavor = pars.value_or_default<int>("flavor", 1);
+	config.param.epsilon = std::pow(10., -8);
 
 	//if (config.param.stag_mu > 0. || config.param.stag_mu < 0. || config.param.tprime > 0.
 	//	|| config.param.tprime < 0. || config.param.decoupling == "dirac")
