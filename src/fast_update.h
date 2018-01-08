@@ -557,6 +557,11 @@ class fast_update
 				std::cout << "---" << std::endl;
 			}
 		}
+
+		double slater_overlap(const dmatrix_t& p1, const dmatrix_t& p2)
+		{
+			return std::abs((p1.adjoint() * p2).determinant());
+		}
 		
 		void get_trial_wavefunction(const dmatrix_t& H)
 		{
@@ -716,15 +721,24 @@ class fast_update
 					}
 
 				/*
-
 				P.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[param.slater];
 				for (int j = 0; j < 5; ++j)
 					total_quantum_numbers[j] *= e0_quantum_numbers[param.slater][j];
-
 				*/
 
 				Pt = P.adjoint();
 				//print_representations(P, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm);
+				
+				dmatrix_t p1 = P, p2 = P, p3 = P, p4 = P, p5 = P, p6 = P;
+				p1.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[0];
+				p2.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[1];
+				p3.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[2];
+				p4.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[3];
+				std::cout << "overlap |<1|1>| = " << slater_overlap(p1, p1) << std::endl;
+				std::cout << "overlap |<1|2>| = " << slater_overlap(p1, p2) << std::endl;
+				std::cout << "overlap |<1|3>| = " << slater_overlap(p1, p3) << std::endl;
+				std::cout << "overlap |<1|4>| = " << slater_overlap(p1, p4) << std::endl;
+
 				
 				/*
 				P.resize(n_matrix_size, n_matrix_size / 2);
