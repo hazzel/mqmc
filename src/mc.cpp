@@ -143,7 +143,6 @@ void mc::random_read(idump& d)
 void mc::init()
 {
 	qmc.init_events();
-	//Initialize vertex list to reduce warm up time
 	qmc.trigger_event("initial build");
 }
 
@@ -217,7 +216,8 @@ bool mc::is_thermalized()
 
 void mc::do_update()
 {
-	if (sweep % config.param.n_rebuild == 0)
+	//std::cout << "Starting to update..." << std::endl;
+	if (sweep > 0 && sweep % config.param.n_rebuild == 0)
 		config.M.rebuild();
 	for (int i = 0; i < n_dyn_cycles; ++i)
 	{
@@ -248,13 +248,15 @@ void mc::do_update()
 					if (measure_dyn_cnt % n_dyn_cycles == n_dyn_cycles / 2)
 					{
 						++dyn_bin_cnt;
+						//std::cout << "Begin dynamic measurement..." << std::endl;
 						qmc.trigger_event("dyn_measure");
+						//std::cout << "End dynamic measurement..." << std::endl;
 					}
 				}
 			}
 			qmc.trigger_event("flip all");
 			config.M.stabilize_backward();
-			//if (n % 5 == 0)
+			//if (n % 100 == 0)
 			//	std::cout << "tau = " << n << std::endl;
 		}
 		if (config.param.n_discrete_tau > 0)
@@ -297,11 +299,13 @@ void mc::do_update()
 					if (measure_dyn_cnt % n_dyn_cycles == n_dyn_cycles / 2)
 					{
 						++dyn_bin_cnt;
+						//std::cout << "Begin dynamic measurement..." << std::endl;
 						qmc.trigger_event("dyn_measure");
+						//std::cout << "End dynamic measurement..." << std::endl;
 					}
 				}
 			}
-			//if (n % 5 == 0)
+			//if (n % 100 == 0)
 			//	std::cout << "tau = " << n << std::endl;
 		}
 		if (config.param.n_discrete_tau > 0)

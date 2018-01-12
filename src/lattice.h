@@ -24,7 +24,8 @@ class lattice
 		typedef graph_t::edge_iterator edge_it_t;
 		typedef boost::multi_array<int, 2> multi_array_t;
 		typedef std::vector<std::vector<int>> nested_vector_t;
-		typedef std::vector<std::pair<int, int>> pair_vector_t;
+		typedef std::pair<int, int> pair_t;
+		typedef std::vector<pair_t> pair_vector_t;
 		typedef std::map<std::string, nested_vector_t> neighbor_map_t;
 		typedef std::map<std::string, pair_vector_t> bond_map_t;
 		typedef std::vector<Eigen::Vector2d> real_space_map_t;
@@ -258,6 +259,59 @@ class lattice
 					return false;
 			}
 			return true;
+		}
+		
+		pair_vector_t generate_kekule_bonds(int i, int j, int alpha)
+		{
+			Eigen::Vector2d kek_base_1 = a1 + a2;
+			Eigen::Vector2d kek_base_2 = 2.*a1 - a2;
+			Eigen::Vector2d R_ij = i * kek_base_1 + j * kek_base_2;
+			std::vector<int> r;
+			r.push_back(site_at_position(R_ij + Eigen::Vector2d{-1.0, 0.}));
+			r.push_back(site_at_position(R_ij + Eigen::Vector2d{-0.5, std::sqrt(3.)/2.}));
+			r.push_back(site_at_position(R_ij + Eigen::Vector2d{0.5, std::sqrt(3.)/2.}));
+			r.push_back(site_at_position(R_ij + Eigen::Vector2d{-0.5, -std::sqrt(3.)/2.}));
+			r.push_back(site_at_position(R_ij + Eigen::Vector2d{0.5, -std::sqrt(3.)/2.}));
+			r.push_back(site_at_position(R_ij + Eigen::Vector2d{1.0, 0.}));
+			r.push_back(site_at_position(R_ij + Eigen::Vector2d{1.0, std::sqrt(3.)}));
+			r.push_back(site_at_position(R_ij + Eigen::Vector2d{2.0, 0.}));
+			r.push_back(site_at_position(R_ij + Eigen::Vector2d{1.0, -std::sqrt(3.)}));
+			pair_vector_t kek_bonds;
+			
+			if (alpha == 0)
+			{
+				kek_bonds.push_back({r[1], r[2]});
+				kek_bonds.push_back({r[2], r[1]});
+				
+				kek_bonds.push_back({r[0], r[3]});
+				kek_bonds.push_back({r[3], r[0]});
+				
+				kek_bonds.push_back({r[4], r[5]});
+				kek_bonds.push_back({r[5], r[4]});
+			}
+			else if (alpha == 1)
+			{
+				kek_bonds.push_back({r[0], r[1]});
+				kek_bonds.push_back({r[1], r[0]});
+				
+				kek_bonds.push_back({r[2], r[5]});
+				kek_bonds.push_back({r[5], r[2]});
+				
+				kek_bonds.push_back({r[3], r[4]});
+				kek_bonds.push_back({r[4], r[3]});
+			}
+			else if (alpha == 2)
+			{
+				kek_bonds.push_back({r[2], r[6]});
+				kek_bonds.push_back({r[6], r[2]});
+				
+				kek_bonds.push_back({r[5], r[7]});
+				kek_bonds.push_back({r[7], r[5]});
+				
+				kek_bonds.push_back({r[4], r[9]});
+				kek_bonds.push_back({r[9], r[4]});
+			}
+			return kek_bonds;
 		}
 
 		void print_sites() const

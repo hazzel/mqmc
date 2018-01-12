@@ -67,6 +67,9 @@ class qr_stabilizer
 				proj_U_r.resize(n_intervals + 1);
 				U_l_buffer.resize(n_intervals + 1);
 				U_r_buffer.resize(n_intervals + 1);
+				
+				//std::cout << "Stabilizer size [MB]: " << 2.*(n_intervals + 1) * (dimension*dimension/2.) * 8.*1E-6 << std::endl;
+				//std::cout << "Stabilizer buffer size [MB]: " << 2.*(n_intervals + 1) * (dimension*dimension/2.) * 8.*1E-6 << std::endl;
 			}
 			else
 			{
@@ -110,15 +113,15 @@ class qr_stabilizer
 		
 		void set_P(const dmatrix_t& P, const dmatrix_t& Pt)
 		{
-			this->P = P;
-			this->Pt = Pt;
+			this->P = &P;
+			this->Pt = &Pt;
 		}
 		
 		void set_proj_l(int n, const dmatrix_t& b)
 		{
 			/*
 			if (n == n_intervals)
-				qr_solver.compute(Pt);
+				qr_solver.compute(*Pt);
 			else
 				qr_solver.compute(proj_U_l[n+1] * b);
 			dmatrix_t r = qr_solver.matrixQR().template triangularView<Eigen::Upper>();
@@ -129,20 +132,20 @@ class qr_stabilizer
 			
 			
 			if (n == n_intervals)
-				qr_solver.compute(Pt.adjoint());
+				qr_solver.compute(Pt->adjoint());
 			else
 				qr_solver.compute(b.adjoint() * proj_U_l[n+1].adjoint());
-			dmatrix_t p_q = dmatrix_t::Identity(Pt.rows(), Pt.cols());
+			dmatrix_t p_q = dmatrix_t::Identity(Pt->rows(), Pt->cols());
 			proj_U_l[n] = p_q * qr_solver.matrixQ().adjoint();
 		}
 		
 		void set_proj_r(int n, const dmatrix_t& b)
 		{
 			if (n == 0)
-				qr_solver.compute(P);
+				qr_solver.compute(*P);
 			else
 				qr_solver.compute(b * proj_U_r[n-1]);
-			dmatrix_t p_q = dmatrix_t::Identity(P.rows(), P.cols());
+			dmatrix_t p_q = dmatrix_t::Identity(P->rows(), P->cols());
 			proj_U_r[n] = qr_solver.matrixQ() * p_q;
 			
 			if (n == n_intervals)
@@ -253,7 +256,7 @@ class qr_stabilizer
 				
 				
 				qr_solver.compute(b.adjoint() * proj_U_l[n].adjoint());
-				dmatrix_t p_q = dmatrix_t::Identity(Pt.rows(), Pt.cols());
+				dmatrix_t p_q = dmatrix_t::Identity(Pt->rows(), Pt->cols());
 				proj_U_l[n-1] = p_q * qr_solver.matrixQ().adjoint();
 				
 				dmatrix_t old_gf = id_N;
@@ -436,8 +439,8 @@ class qr_stabilizer
 		dmatrix_t U_r;
 		diag_matrix_t D_r;
 		dmatrix_t V_r;
-		dmatrix_t P;
-		dmatrix_t Pt;
+		const dmatrix_t* P;
+		const dmatrix_t* Pt;
 		Eigen::ColPivHouseholderQR<dmatrix_t> qr_solver;
 		Eigen::JacobiSVD<dmatrix_t> svd_solver;
 		Eigen::FullPivLU<dmatrix_t> lu_solver;

@@ -121,8 +121,6 @@ struct measure_M
 			{
 				if (config.param.obs[i] == "epsilon")
 					config.measure.add_vectorevalable("dyn_epjack_tau", "dyn_epsilon_tau", "epsilon", eval_epsilon);
-				if (config.param.obs[i] == "sp")
-					config.measure.add_vectorevalable("sp_log_ratio", "dyn_sp_tau", eval_log_ratio);
 			}
 		
 		os << "PARAMETERS" << std::endl;

@@ -164,8 +164,8 @@ struct event_static_measurement
 		int n_prebin_, const std::vector<std::string>& observables)
 		: config(config_), rng(rng_), n_prebin(n_prebin_)
 	{
-		obs.reserve(100);
-		vec_obs.reserve(100);
+		obs.reserve(observables.size());
+		vec_obs.reserve(observables.size());
 		for (int i = 0; i < observables.size(); ++i)
 		{
 			if (observables[i] == "energy")
@@ -291,14 +291,16 @@ struct event_dynamic_measurement
 		int n_prebin_, const std::vector<std::string>& observables)
 		: config(config_), rng(rng_), n_prebin(n_prebin_)
 	{
-		obs.reserve(100);
-		vec_obs.reserve(100);
+		obs.reserve(observables.size());
+		vec_obs.reserve(observables.size());
 		for (int i = 0; i < observables.size(); ++i)
 		{
 			if (observables[i] == "M2")
 				add_wick(wick_M2{config, rng}, observables[i]);
 			else if (observables[i] == "kekule")
-				add_wick(wick_kekule{config, rng}, observables[i]);
+				add_wick(wick_kekule_s{config, rng}, observables[i]);
+			else if (observables[i] == "kekule_as")
+				add_wick(wick_kekule_as{config, rng}, observables[i]);
 			else if (observables[i] == "epsilon")
 				add_wick(wick_epsilon{config, rng}, observables[i]);
 			else if (observables[i] == "epsilon_V")
