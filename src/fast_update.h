@@ -33,8 +33,8 @@ template<typename arg_t>
 class fast_update
 {
 	public:
-		//using numeric_t = std::complex<double>;
-		using numeric_t = double;
+		using numeric_t = std::complex<double>;
+		//using numeric_t = double;
 		template<int n, int m>
 		using matrix_t = Eigen::Matrix<numeric_t, n, m, Eigen::ColMajor>;
 		using dmatrix_t = matrix_t<Eigen::Dynamic, Eigen::Dynamic>;
@@ -562,6 +562,55 @@ class fast_update
 		{
 			return std::abs((p1.adjoint() * p2).determinant());
 		}
+
+		dmatrix_t fourier_transform_basis(const dmatrix_t& H)
+		{
+			dmatrix_t k_orbital_basis = dmatrix_t::Zero(l.n_sites(), l.n_sites());
+			dmatrix_t k_band_basis = dmatrix_t::Zero(l.n_sites(), l.n_sites());
+			std::complex<double> im = {0., 1.};
+			for (int o = 0; o < 2; ++o)
+				for (int i = 0; i < param.Lx; ++i)
+					for (int j = 0; j < param.Ly; ++j)
+						for (int m = 0; m < param.Lx; ++m)
+							for (int n = 0; n < param.Ly; ++n)
+							{
+								auto r = l.a1 * static_cast<double>(i) / param.Lx + l.a2 * static_cast<double>(j) / param.Ly;
+								auto k = l.b1 * static_cast<double>(m) / param.Lx + l.b2 * static_cast<double>(n) / param.Ly;
+								k_orbital_basis(2*(i*param.Ly+j)+o, 2*(m*param.Ly+n)+o) = std::exp(-im * k.dot(r)) / std::sqrt(param.Lx * param.Ly);
+							}
+
+			for (int m = 0; m < param.Lx; ++m)
+				for (int n = 0; n < param.Ly; ++n)
+				{
+					auto k = l.b1 * static_cast<double>(m) / param.Lx + l.b2 * static_cast<double>(n) / param.Ly;
+					std::complex<double> f_k = 1. + std::exp(-im * k.dot(l.a2 - l.a1)) + std::exp(im * k.dot(l.a1));
+					k_band_basis.col(m*param.Ly+n) = std::sqrt(std::conj(f_k)) * k_orbital_basis.col(2*(m*param.Ly+n))
+						+ std::sqrt(f_k) * k_orbital_basis.col(2*(m*param.Ly+n)+1);
+					k_band_basis.col(m*param.Ly+n + param.Ly*param.Lx) = -std::sqrt(std::conj(f_k)) * k_orbital_basis.col(2*(m*param.Ly+n))
+						+ std::sqrt(f_k) * k_orbital_basis.col(2*(m*param.Ly+n)+1);		
+				}
+			for (int i = 0; i < k_band_basis.cols(); ++i)
+				k_band_basis.col(i) /= k_band_basis.col(i).norm();
+
+			for (int o = 0; o < 2; ++o)
+				for (int m = 0; m < param.Lx; ++m)
+					for (int n = 0; n < param.Ly; ++n)
+					{
+						auto k = l.b1 * static_cast<double>(m) / param.Lx + l.b2 * static_cast<double>(n) / param.Ly;
+						std::complex<double> f_k = 1. + std::exp(-im * k.dot(l.a2 - l.a1)) + std::exp(im * k.dot(l.a1));
+						std::cout << "E(k = " << m*param.Ly+n + o*param.Ly*param.Lx << ") = " << (2.*o - 1.) * std::abs(f_k) << std::endl;
+					}
+			std::cout << std::endl;
+
+			for (int i = 0; i < k_band_basis.cols(); ++i)
+			{
+				for (int j = 0; j < k_band_basis.cols(); ++j)
+					std::cout << k_band_basis.col(i).adjoint() * k_band_basis.col(j) << " ";
+				std::cout << std::endl;
+			}
+
+			return k_band_basis;
+		}
 		
 		void get_trial_wavefunction(const dmatrix_t& H)
 		{
@@ -581,6 +630,8 @@ class fast_update
 				rot120_pm(i, l.rotated_site(i, 120.)) = 1.;
 				ph_pm(i, i) = l.parity(i);
 			}
+
+			auto k_orbital_basis = fourier_transform_basis(H);
 			
 			std::vector<numeric_t> total_quantum_numbers = {{1., 1., 1., 1., 1.}};
 			std::vector<numeric_t> ph_2p_parity(4);
