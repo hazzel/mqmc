@@ -365,6 +365,8 @@ class lattice
 		Eigen::Vector2d b2;
 		// Center of inversion symmetry
 		Eigen::Vector2d center;
+		// Nearest neighbor vector_wick_base
+		Eigen::Vector2d delta;
 		int Lx;
 		int Ly;
 	private:

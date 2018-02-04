@@ -116,6 +116,7 @@ struct honeycomb
 		l.b1 = b1;
 		l.b2 = b2;
 		l.center = center;
+		l.delta = delta;
 		l.Lx = Lx;
 		l.Ly = Ly;
 	
