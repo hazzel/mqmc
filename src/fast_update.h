@@ -147,8 +147,8 @@ class fast_update
 			{
 				H0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 				build_dirac_H0(H0);
-				get_trial_wavefunction(H0);
-				//get_momentum_trial_wavefunction(H0);
+				//get_trial_wavefunction(H0);
+				get_momentum_trial_wavefunction(H0);
 				stabilizer.set_P(P, Pt);
 			}
 			stabilizer.set_method(param.use_projector);
@@ -708,35 +708,29 @@ class fast_update
 				sorted_k_orbital_basis.col(2*i+1) = k_orbital_basis.col(2*sort_indices[i]+1);
 				sorted_k_band_basis.col(2*i+1) = k_band_basis.col(2*sort_indices[i]+1);
 				en_vector[2*i+1] = energy[2*sort_indices[i]+1];
-				std::cout << "E(" << 2*i << ") = " << energy[2*sort_indices[i]] << ", k = (" << momentum[2*sort_indices[i]][0] << ", " << momentum[2*sort_indices[i]][1]
-					<< "), form_factor = " << form_factor[2*sort_indices[i]] << std::endl;
+				//std::cout << "E(" << 2*i << ") = " << energy[2*sort_indices[i]] << ", k = (" << momentum[2*sort_indices[i]][0] << ", " << momentum[2*sort_indices[i]][1]
+				//	<< "), form_factor = " << form_factor[2*sort_indices[i]] << std::endl;
 			}
 			Eigen::Vector2d total_k = {0., 0.};
 			for (int i = 0; i < n_matrix_size/2-2; ++i)
 				total_k += momentum[2*sort_indices[i]];
 			
-			std::cout << "Total momentum modulo dirac levels: (" << total_k[0] << ", " << total_k[1] << ")" << std::endl;
-			std::cout << "b1 = (" << l.b1[0] << ", " << l.b1[1] << "), b2 = (" << l.b2[0] << ", " << l.b2[1] << ")" << std::endl;
+			//std::cout << "Total momentum modulo dirac levels: (" << total_k[0] << ", " << total_k[1] << ")" << std::endl;
+			//std::cout << "b1 = (" << l.b1[0] << ", " << l.b1[1] << "), b2 = (" << l.b2[0] << ", " << l.b2[1] << ")" << std::endl;
 			
 			P = dmatrix_t::Zero(n_matrix_size, n_matrix_size/2);
-			for (int i = 0; i < n_matrix_size/2-2; ++i)
+			for (int i = 0; i < n_matrix_size/2; ++i)
 				P.col(i) = sorted_k_band_basis.col(2*i);
+			/*
 			dmatrix_t gs_levels = sorted_k_band_basis.block(0, 0, n_matrix_size, 2);
-			dmatrix_t mid_levels = sorted_k_band_basis.block(0, 2, n_matrix_size, 12);
+			dmatrix_t mid_levels = sorted_k_band_basis.block(0, 2, n_matrix_size, n_matrix_size-2);
 			dmatrix_t dirac_levels = sorted_k_band_basis.block(0, n_matrix_size-4, n_matrix_size, 4);
-			
-			dmatrix_t mid_levels_lower_band(n_matrix_size, mid_levels.cols()/2);
-			for (int i = 0; i < mid_levels.cols()/2; ++i)
-				mid_levels_lower_band.col(i) = mid_levels.col(2*i);
 			
 			std::cout << "sorted orbital levels:" << std::endl << std::endl;
 			print_representations(sorted_k_orbital_basis, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
 			std::cout << "----" << std::endl;
-			std::cout << "gs_levels both bands:" << std::endl << std::endl;
+			std::cout << "gs_levels all bands:" << std::endl << std::endl;
 			print_representations(gs_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
-			std::cout << "----" << std::endl;
-			std::cout << "mid_levels lower bands:" << std::endl << std::endl;
-			print_representations(mid_levels_lower_band, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
 			std::cout << "----" << std::endl;
 			std::cout << "mid_levels all bands:" << std::endl << std::endl;
 			print_representations(mid_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
@@ -791,9 +785,12 @@ class fast_update
 			print_representations(real_dirac_levels_ph, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
 			std::cout << "----" << std::endl;
 			
-			//P.col(0) = gs_levels.col(1);
 			P.col(n_matrix_size/2-2) = dirac_levels_ph.col(0);
 			P.col(n_matrix_size/2-1) = dirac_levels_ph.col(1);
+			*/
+			
+			//print_representations(sorted_k_band_basis, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
+			//P.col(0) = sorted_k_band_basis.col(1);
 			Pt = P.adjoint();
 		}
 		
@@ -821,8 +818,12 @@ class fast_update
 			std::vector<std::vector<int>> energy_levels = get_energy_levels(solver.eigenvalues());
 			
 			auto S_f = symmetrize_EV(solver.eigenvectors(), solver.eigenvalues(), inv_pm);
+			
 			/*
 			auto S_f = solver.eigenvectors();
+			
+			S_f = project_symmetry(S_f, energy_levels, ph_pm);
+			split_quantum_numbers(energy_levels, S_f, ph_pm);
 			
 			std::cout << "Project symmetry P_inv" << std::endl;
 			S_f = project_symmetry(S_f, energy_levels, inv_pm);
@@ -844,26 +845,20 @@ class fast_update
 			split_quantum_numbers(energy_levels, S_f, rot60_pm);
 			print_energy_levels(S_f, solver.eigenvalues(), energy_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm);
 			*/
+			
 			/*
 			std::cout << "Project symmetry P_rot120" << std::endl;
 			S_f = project_symmetry(S_f, energy_levels, rot120_pm);
 			split_quantum_numbers(energy_levels, S_f, rot120_pm);
 			print_energy_levels(S_f, solver.eigenvalues(), energy_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm);
 			*/
-
-			for (int i = 0; i < n_matrix_size/2-2; ++i)
-			{
-				total_quantum_numbers[0] *= (S_f.col(i).adjoint() * inv_pm * S_f.col(i)).trace();
-				total_quantum_numbers[1] *= (S_f.col(i).adjoint() * sv_pm * S_f.col(i)).trace();
-				total_quantum_numbers[2] *= (S_f.col(i).adjoint() * sh_pm * S_f.col(i)).trace();
-				total_quantum_numbers[3] *= (S_f.col(i).adjoint() * rot60_pm * S_f.col(i)).trace();
-				total_quantum_numbers[4] *= (S_f.col(i).adjoint() * rot120_pm * S_f.col(i)).trace();
-			}
 			
 			if (l.n_sites() % 3 != 0)
 			{
-				P = solver.eigenvectors().leftCols(n_matrix_size/2);
-				for (int i = n_matrix_size/2-2; i < n_matrix_size; ++i)
+				print_energy_levels(S_f, solver.eigenvalues(), energy_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm);
+				
+				P = S_f.leftCols(n_matrix_size/2);
+				for (int i = 0; i < n_matrix_size/2; ++i)
 				{
 					total_quantum_numbers[0] *= (S_f.col(i).adjoint() * inv_pm * S_f.col(i)).trace();
 					total_quantum_numbers[1] *= (S_f.col(i).adjoint() * sv_pm * S_f.col(i)).trace();
@@ -871,6 +866,7 @@ class fast_update
 					total_quantum_numbers[3] *= (S_f.col(i).adjoint() * rot60_pm * S_f.col(i)).trace();
 					total_quantum_numbers[4] *= (S_f.col(i).adjoint() * rot120_pm * S_f.col(i)).trace();
 				}
+				
 				if (std::abs(param.inv_symmetry - total_quantum_numbers[0]) > param.epsilon)
 				{
 					total_quantum_numbers[0] /= (S_f.col(0).adjoint() * inv_pm * S_f.col(0)).trace();
@@ -881,10 +877,21 @@ class fast_update
 					total_quantum_numbers[2] *= (S_f.col(n_matrix_size-1).adjoint() * sh_pm * S_f.col(n_matrix_size-1)).trace();
 					P.col(0) = S_f.col(n_matrix_size-1);
 				}
+				print_representations(P, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
+				
 				Pt = P.adjoint();
 			}
 			else
 			{
+				for (int i = 0; i < n_matrix_size/2-2; ++i)
+				{
+					total_quantum_numbers[0] *= (S_f.col(i).adjoint() * inv_pm * S_f.col(i)).trace();
+					total_quantum_numbers[1] *= (S_f.col(i).adjoint() * sv_pm * S_f.col(i)).trace();
+					total_quantum_numbers[2] *= (S_f.col(i).adjoint() * sh_pm * S_f.col(i)).trace();
+					total_quantum_numbers[3] *= (S_f.col(i).adjoint() * rot60_pm * S_f.col(i)).trace();
+					total_quantum_numbers[4] *= (S_f.col(i).adjoint() * rot120_pm * S_f.col(i)).trace();
+				}
+			
 				dmatrix_t ph_1p_block = S_f.block(0, n_matrix_size/2-2, n_matrix_size, 4);
 				Eigen::VectorXd ph_ev = Eigen::VectorXd::Zero(4);
 				
@@ -966,69 +973,6 @@ class fast_update
 
 				Pt = P.adjoint();
 				//print_representations(P, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
-				
-				/*
-				dmatrix_t p1 = P, p2 = P, p3 = P, p4 = P, p5 = P, p6 = P;
-				p1.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[0];
-				p2.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[1];
-				p3.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[2];
-				p4.block(0, n_matrix_size/2-2, n_matrix_size, 2) = ph_2p_block[3];
-				std::cout << "overlap |<1|1>| = " << slater_overlap(p1, p1) << std::endl;
-				std::cout << "overlap |<1|2>| = " << slater_overlap(p1, p2) << std::endl;
-				std::cout << "overlap |<1|3>| = " << slater_overlap(p1, p3) << std::endl;
-				std::cout << "overlap |<1|4>| = " << slater_overlap(p1, p4) << std::endl;
-				*/
-				
-				/*
-				P.resize(n_matrix_size, n_matrix_size / 2);
-				for (int i = 0; i < n_matrix_size/2-2; ++i)
-					P.col(i) = S_f.col(i);
-				if (param.slater == 0)
-				{
-					P.col(n_matrix_size/2-2) = S_f.col(n_matrix_size/2-2);
-					P.col(n_matrix_size/2-1) = S_f.col(n_matrix_size/2-1);
-				}
-				else if (param.slater == 1)
-				{
-					P.col(n_matrix_size/2-2) = S_f.col(n_matrix_size/2-2);
-					P.col(n_matrix_size/2-1) = S_f.col(n_matrix_size/2);
-				}
-				else if (param.slater == 2)
-				{
-					P.col(n_matrix_size/2-2) = S_f.col(n_matrix_size/2-2);
-					P.col(n_matrix_size/2-1) = S_f.col(n_matrix_size/2+1);
-				}
-				else if (param.slater == 3)
-				{
-					P.col(n_matrix_size/2-2) = S_f.col(n_matrix_size/2-1);
-					P.col(n_matrix_size/2-1) = S_f.col(n_matrix_size/2);
-				}
-				else if (param.slater == 4)
-				{
-					P.col(n_matrix_size/2-2) = S_f.col(n_matrix_size/2-1);
-					P.col(n_matrix_size/2-1) = S_f.col(n_matrix_size/2+1);
-				}
-				else if (param.slater == 5)
-				{
-					P.col(n_matrix_size/2-2) = S_f.col(n_matrix_size/2);
-					P.col(n_matrix_size/2-1) = S_f.col(n_matrix_size/2+1);
-				}
-			
-				total_quantum_numbers = {{1., 1., 1., 1., 1.}};
-				for (int i = 0; i < n_matrix_size/2; ++i)
-				{
-					total_quantum_numbers[0] *= (S_f.col(i).adjoint() * inv_pm * S_f.col(i)).trace();
-					total_quantum_numbers[1] *= (S_f.col(i).adjoint() * sv_pm * S_f.col(i)).trace();
-					total_quantum_numbers[2] *= (S_f.col(i).adjoint() * sh_pm * S_f.col(i)).trace();
-					total_quantum_numbers[3] *= (S_f.col(i).adjoint() * rot60_pm * S_f.col(i)).trace();
-					total_quantum_numbers[4] *= (S_f.col(i).adjoint() * rot120_pm * S_f.col(i)).trace();
-				}
-				std::cout << "inv_P = " << total_quantum_numbers[0] << ", sv_P = " << total_quantum_numbers[1]
-						<< ", sh_P = " << total_quantum_numbers[2] << ", rot60_P = " << total_quantum_numbers[3]
-						<< ", rot120_P = " << total_quantum_numbers[4] << std::endl;
-
-				Pt = P.adjoint();
-				*/
 			}
 			if (std::abs(param.inv_symmetry - total_quantum_numbers[0]) > param.epsilon)
 			{
