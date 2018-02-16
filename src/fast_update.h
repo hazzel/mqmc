@@ -618,7 +618,8 @@ class fast_update
 								//auto r = l.a1 * static_cast<double>(i) + l.a2 * static_cast<double>(j);
 								auto r = l.real_space_coord(2*(j*param.Ly+i));
 								auto k = l.b1 * static_cast<double>(m) / param.Lx + l.b2 * static_cast<double>(n) / param.Ly;
-								std::complex<double> alpha = std::exp(-im * k.dot(l.delta - 2.*l.center));
+								//std::complex<double> alpha = std::exp(-im * k.dot(l.delta - 2.*l.center));
+								std::complex<double> alpha = 1.;
 								k_orbital_basis(2*(j*param.Lx+i)+o, 2*(n*param.Lx+m)+o) = std::exp(im * k.dot(r)) / std::sqrt(param.Lx * param.Ly) * alpha;
 							}
 			for (int n = 0; n < param.Ly; ++n)
@@ -657,10 +658,6 @@ class fast_update
 					}
 					else
 					{
-						/*
-						k_band_basis.col(2*(n*param.Lx+m)) = k_orbital_basis.col(2*(n*param.Lx+m));
-						k_band_basis.col(2*(n*param.Lx+m)+1) = k_orbital_basis.col(2*(n*param.Lx+m)+1);
-						*/
 						k_band_basis.col(2*(n*param.Lx+m)) = k_orbital_basis.col(2*(n*param.Lx+m)) + k_orbital_basis.col(2*(n*param.Lx+m)+1);
 						k_band_basis.col(2*(n*param.Lx+m)+1) = -k_orbital_basis.col(2*(n*param.Lx+m)) + k_orbital_basis.col(2*(n*param.Lx+m)+1);
 					}
@@ -789,7 +786,7 @@ class fast_update
 			P.col(n_matrix_size/2-1) = dirac_levels_ph.col(1);
 			*/
 			
-			//print_representations(sorted_k_band_basis, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
+			print_representations(sorted_k_band_basis, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
 			//P.col(0) = sorted_k_band_basis.col(1);
 			Pt = P.adjoint();
 		}
@@ -822,9 +819,6 @@ class fast_update
 			/*
 			auto S_f = solver.eigenvectors();
 			
-			S_f = project_symmetry(S_f, energy_levels, ph_pm);
-			split_quantum_numbers(energy_levels, S_f, ph_pm);
-			
 			std::cout << "Project symmetry P_inv" << std::endl;
 			S_f = project_symmetry(S_f, energy_levels, inv_pm);
 			split_quantum_numbers(energy_levels, S_f, inv_pm);
@@ -838,12 +832,12 @@ class fast_update
 			std::cout << "Project symmetry P_sh" << std::endl;
 			S_f = project_symmetry(S_f, energy_levels, sh_pm);
 			split_quantum_numbers(energy_levels, S_f, sh_pm);
-			print_energy_levels(S_f, solver.eigenvalues(), energy_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm);
+			//print_energy_levels(S_f, solver.eigenvalues(), energy_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm);
 			
 			std::cout << "Project symmetry P_rot60" << std::endl;
 			S_f = project_symmetry(S_f, energy_levels, rot60_pm);
 			split_quantum_numbers(energy_levels, S_f, rot60_pm);
-			print_energy_levels(S_f, solver.eigenvalues(), energy_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm);
+			//print_energy_levels(S_f, solver.eigenvalues(), energy_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm);
 			*/
 			
 			/*
@@ -877,6 +871,7 @@ class fast_update
 					total_quantum_numbers[2] *= (S_f.col(n_matrix_size-1).adjoint() * sh_pm * S_f.col(n_matrix_size-1)).trace();
 					P.col(0) = S_f.col(n_matrix_size-1);
 				}
+
 				print_representations(P, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
 				
 				Pt = P.adjoint();

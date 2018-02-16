@@ -319,6 +319,8 @@ struct event_dynamic_measurement
 				add_vector_wick(wick_sp_matrix{config, rng}, observables[i], 4);
 			else if (observables[i] == "tp")
 				add_wick(wick_tp{config, rng}, observables[i]);
+			else if (observables[i] == "tp_mat")
+				add_vector_wick(wick_tp_matrix{config, rng}, observables[i], 4);
 		}
 		for (int i = 0; i < obs.size(); ++i)
 			dyn_tau.push_back(std::vector<double>(2*config.param.n_discrete_tau+1, 0.));
