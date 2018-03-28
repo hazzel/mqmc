@@ -786,7 +786,7 @@ class fast_update
 			P.col(n_matrix_size/2-1) = dirac_levels_ph.col(1);
 			*/
 			
-			print_representations(sorted_k_band_basis, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
+			//print_representations(sorted_k_band_basis, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
 			//P.col(0) = sorted_k_band_basis.col(1);
 			Pt = P.adjoint();
 		}
