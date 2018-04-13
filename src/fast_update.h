@@ -147,8 +147,8 @@ class fast_update
 			{
 				H0 = dmatrix_t::Zero(n_matrix_size, n_matrix_size);
 				build_dirac_H0(H0);
-				//get_trial_wavefunction(H0);
-				get_momentum_trial_wavefunction(H0);
+				get_trial_wavefunction(H0);
+				//get_momentum_trial_wavefunction(H0);
 				stabilizer.set_P(P, Pt);
 			}
 			stabilizer.set_method(param.use_projector);
@@ -849,6 +849,7 @@ class fast_update
 			
 			if (l.n_sites() % 3 != 0)
 			{
+				/*
 				print_energy_levels(S_f, solver.eigenvalues(), energy_levels, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm);
 				
 				P = S_f.leftCols(n_matrix_size/2);
@@ -875,6 +876,11 @@ class fast_update
 				print_representations(P, inv_pm, sv_pm, sh_pm, rot60_pm, rot120_pm, ph_pm);
 				
 				Pt = P.adjoint();
+				*/
+				
+				P = S_f.leftCols(n_matrix_size/2);
+				Pt = P.adjoint();
+				return;
 			}
 			else
 			{
