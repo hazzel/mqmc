@@ -417,7 +417,7 @@ struct wick_chern
 			{
 				auto& a = bonds_c1[i];
 				auto& b = bonds_c1[j];
-				/*
+				
 				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
 					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
@@ -426,85 +426,6 @@ struct wick_chern
 					- td_gf(a.first, b.first) * td_gf(a.second, b.second)
 					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
 					+ td_gf(a.second, b.first) * td_gf(a.first, b.second);
-				*/
-				/*
-				ch -= 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
-					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
-					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
-					- td_gf(a.second, b.second) * td_gf(a.first, b.first));
-				*/
-				ch -= 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
-					+ ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
-					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
-					- ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
-			}
-		for (int i = 0; i < N; ++i)
-			for (int j = 0; j < N; ++j)
-			{
-				auto& a = bonds_c2[i];
-				auto& b = bonds_c1[j];
-				/*
-				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
-					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
-					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
-					+ td_gf(a.second, b.second) * td_gf(a.first, b.first)
-					- et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
-					+ td_gf(a.first, b.first) * td_gf(a.second, b.second)
-					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
-					- td_gf(a.second, b.first) * td_gf(a.first, b.second);
-				*/
-				/*
-				ch += 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
-					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
-					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
-					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
-				*/
-				ch += 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
-					- ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
-					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
-					+ ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
-			}
-		for (int i = 0; i < N; ++i)
-			for (int j = 0; j < N; ++j)
-			{
-				auto& a = bonds_c1[i];
-				auto& b = bonds_c2[j];
-				/*
-				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
-					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
-					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
-					+ td_gf(a.second, b.second) * td_gf(a.first, b.first)
-					- et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
-					+ td_gf(a.first, b.first) * td_gf(a.second, b.second)
-					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
-					- td_gf(a.second, b.first) * td_gf(a.first, b.second);
-				*/
-				/*
-				ch += 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
-					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
-					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
-					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
-				*/
-				ch += 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
-					- ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
-					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
-					+ ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
-			}
-		for (int i = 0; i < N; ++i)
-			for (int j = 0; j < N; ++j)
-			{
-				auto& a = bonds_c2[i];
-				auto& b = bonds_c2[j];
-				/*
-				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
-					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
-					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
-					- td_gf(a.second, b.second) * td_gf(a.first, b.first)
-					- et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
-					- td_gf(a.first, b.first) * td_gf(a.second, b.second)
-					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
-					+ td_gf(a.second, b.first) * td_gf(a.first, b.second);
-				*/
 				
 				/*
 				ch -= 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
@@ -512,10 +433,97 @@ struct wick_chern
 					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
 					- td_gf(a.second, b.second) * td_gf(a.first, b.first));
 				*/
+				/*
 				ch -= 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
 					+ ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
 					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
 					- ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
+				*/
+			}
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
+			{
+				auto& a = bonds_c2[i];
+				auto& b = bonds_c1[j];
+				
+				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
+					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					+ td_gf(a.second, b.second) * td_gf(a.first, b.first)
+					- et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					+ td_gf(a.first, b.first) * td_gf(a.second, b.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
+					- td_gf(a.second, b.first) * td_gf(a.first, b.second);
+				
+				/*
+				ch += 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
+					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
+				*/
+				/*
+				ch += 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
+					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
+				*/
+			}
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
+			{
+				auto& a = bonds_c1[i];
+				auto& b = bonds_c2[j];
+				
+				ch += et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
+					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					+ td_gf(a.second, b.second) * td_gf(a.first, b.first)
+					- et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					+ td_gf(a.first, b.first) * td_gf(a.second, b.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
+					- td_gf(a.second, b.first) * td_gf(a.first, b.second);
+				
+				/*
+				ch += 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					- td_gf(a.first, b.second) * td_gf(a.second, b.first)
+					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					+ td_gf(a.second, b.second) * td_gf(a.first, b.first));
+				*/
+				/*
+				ch += 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
+					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
+				*/
+			}
+		for (int i = 0; i < N; ++i)
+			for (int j = 0; j < N; ++j)
+			{
+				auto& a = bonds_c2[i];
+				auto& b = bonds_c2[j];
+				
+				ch -= et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
+					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					- td_gf(a.second, b.second) * td_gf(a.first, b.first)
+					- et_gf_t(a.second, a.first) * et_gf_0(b.first, b.second)
+					- td_gf(a.first, b.first) * td_gf(a.second, b.second)
+					+ et_gf_t(a.first, a.second) * et_gf_0(b.first, b.second)
+					+ td_gf(a.second, b.first) * td_gf(a.first, b.second);
+				
+				
+				/*
+				ch -= 2.*(et_gf_t(a.second, a.first) * et_gf_0(b.second, b.first)
+					+ td_gf(a.first, b.second) * td_gf(a.second, b.first)
+					- et_gf_t(a.first, a.second) * et_gf_0(b.second, b.first)
+					- td_gf(a.second, b.second) * td_gf(a.first, b.first));
+				*/
+				/*
+				ch -= 2.*(ca_et_gf_t[a.first*ns+a.second] * ca_et_gf_0[b.first*ns+b.second]
+					+ ca_td_gf[b.second*ns+a.first] * ca_td_gf[b.first*ns+a.second]
+					- ca_et_gf_t[a.second*ns+a.first] * ca_et_gf_0[b.first*ns+b.second]
+					- ca_td_gf[b.second*ns+a.second] * ca_td_gf[b.first*ns+a.first]);
+				*/
 			}
 		return std::real(ch) / std::pow(config.l.n_bonds(), 2.);
 	}

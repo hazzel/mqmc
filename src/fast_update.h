@@ -879,6 +879,10 @@ class fast_update
 				*/
 				
 				P = S_f.leftCols(n_matrix_size/2);
+				//for (int i = 0; i < n_matrix_size/2; ++i)
+				//	total_quantum_numbers[0] *= (S_f.col(i).adjoint() * inv_pm * S_f.col(i)).trace();
+				//std::cout << "P = " << total_quantum_numbers[0] << std::endl;
+				//std::cout << solver.eigenvalues()[n_matrix_size/2-1] << std::endl;
 				Pt = P.adjoint();
 				return;
 			}

@@ -42,7 +42,8 @@ struct wick_sp_matrix
 			for (int v = 0; v < 2; ++v)
 			{
 				auto& r_j = config.l.real_space_coord(j);
-				double kdot = K.dot(r_i) + Kp.dot(r_j);
+				//double kdot = K.dot(r_i) + Kp.dot(r_j);
+				double kdot = K.dot(r_i - r_j);
 				values[u*2+v] += std::real(std::cos(kdot) * ca_td_gf[(j+v)*N+(i+u)] * config.l.parity((i+u))*config.l.parity((j+v)) / static_cast<double>(N/2));
 				//values[u*2+v] += std::cos(kdot) * ca_td_gf[(j+v)*N+(i+u)] / (N/2);
 			}
@@ -70,14 +71,16 @@ struct wick_tp_matrix
 		auto& K = config.l.symmetry_point("K");
 		const int N = config.l.n_sites();
 		std::fill(values.begin(), values.end(), 0.);
-		for (int i = 0; i < N; i+=2)
-		//int i = 2 * static_cast<int>(rng() * N / 2);
+		//for (int i = 0; i < N; i+=2)
+		int i = 2 * static_cast<int>(rng() * N / 2);
 		for (int m = 0; m < N; m+=2)
+		//int m = 2 * static_cast<int>(rng() * N / 2);
 		for (int u = 0; u < 2; ++u)
 		{
 			auto& r_i = config.l.real_space_coord(i);
 			auto& r_m = config.l.real_space_coord(m);
-			for (int j = 0; j < N; j+=2)
+			//for (int j = 0; j < N; j+=2)
+			int j = 2 * static_cast<int>(rng() * N / 2);
 			for (int n = 0; n < N; n+=2)
 			for (int v = 0; v < 2; ++v)
 			{
